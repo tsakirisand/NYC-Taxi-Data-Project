@@ -1,0 +1,32 @@
+# Byte-compiled / Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Data Files (Do not commit large Parquet / DB files)
+data/raw/
+data/validated/
+data/processed/
+*.parquet
+*.db
+*.sqlite
+*.log
+
+# Airflow & Local logs
+logs/
+airflow.cfg
+airflow.db
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Environment variables
+.env
