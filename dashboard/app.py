@@ -18,6 +18,7 @@ import streamlit as st  # noqa: E402
 from dashboard.components.demand_charts import render_demand_page  # noqa: E402
 from dashboard.components.economics_charts import render_economics_page  # noqa: E402
 from dashboard.components.kpis import render_kpi_cards  # noqa: E402
+from dashboard.components.reports_view import render_reports_page  # noqa: E402
 from dashboard.components.sidebar import render_sidebar_filters  # noqa: E402
 from dashboard.components.spatial_charts import render_spatial_page  # noqa: E402
 from dashboard.styles import inject_custom_css  # noqa: E402
@@ -164,6 +165,7 @@ def main():
             "📊 Executive Overview",
             "📍 Spatial & Zone Analytics",
             "💳 Economics & SQL Workbench",
+            "💡 Executive Report & Insights",
         ],
         label_visibility="collapsed",
     )
@@ -227,6 +229,20 @@ def main():
             unsafe_allow_html=True,
         )
         render_economics_page(filtered_df)
+
+    elif "Report" in selected_page:
+        st.markdown(
+            """
+            <div class="main-header">
+                <h1 class="main-header-title">💡 Executive Report & Urban Analytics Insights</h1>
+                <p class="main-header-subtitle">
+                    Comprehensive Empirical Data Analysis • Policy Recommendations • Downloadable Artifacts
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        render_reports_page(filtered_df)
 
 
 if __name__ == "__main__":

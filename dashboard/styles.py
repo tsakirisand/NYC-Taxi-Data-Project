@@ -178,23 +178,12 @@ def inject_custom_css():
             border: none !important;
         }
 
-        /* Hide radio circle dot icon completely in Streamlit 1.63 */
-        [data-testid="stSidebar"] label[data-baseweb="radio"] > div:not([data-testid="stMarkdownContainer"]),
-        [data-testid="stSidebar"] label[data-baseweb="radio"] div[class*="e1f1d6gn"],
-        [data-testid="stSidebar"] label[data-baseweb="radio"] div[class*="st-emotion-cache-1pxn4r6"],
-        [data-testid="stSidebar"] label[data-baseweb="radio"] div[class*="st-emotion-cache-13mkwfa"],
-        [data-testid="stSidebar"] label[data-baseweb="radio"] input,
-        [data-testid="stSidebar"] label[data-baseweb="radio"] svg,
-        [data-testid="stSidebar"] label[data-baseweb="radio"] [aria-hidden="true"],
-        [data-testid="stSidebar"] [data-testid="stRadio"] label > div:first-child {
+        /* Hide radio circle dot icon completely in Streamlit */
+        [data-testid="stSidebar"] [data-testid="stRadio"] label > *:not([data-testid="stMarkdownContainer"]) {
             display: none !important;
             visibility: hidden !important;
             width: 0 !important;
             height: 0 !important;
-            max-width: 0 !important;
-            max-height: 0 !important;
-            min-width: 0 !important;
-            min-height: 0 !important;
             opacity: 0 !important;
             margin: 0 !important;
             padding: 0 !important;
