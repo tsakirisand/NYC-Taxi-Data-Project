@@ -58,6 +58,9 @@ def load_dashboard_data():
             """,
             con=engine,
         )
+        if kpi_df.empty or kpi_df.iloc[0]["total_trips"] is None or kpi_df.iloc[0]["total_trips"] == 0:
+            raise ValueError("Database table fact_trips is empty or not populated.")
+
         totals_dict = kpi_df.iloc[0].to_dict()
 
         # 2. Taxi Zone Lookup Table
@@ -80,6 +83,9 @@ def load_dashboard_data():
             """,
             con=engine,
         )
+        if trips_df.empty:
+            raise ValueError("Database sample query returned empty dataframe.")
+
         trips_df["pickup_zone_name"] = trips_df["pulocation_id"].map(zone_dict)
 
     except Exception:
@@ -100,13 +106,16 @@ def load_dashboard_data():
         else:
             zones_df = pd.DataFrame()
 
-        if (
-            not trips_df.empty
-            and "PULocationID" in trips_df.columns
-            and not zones_df.empty
-        ):
-            zone_dict = dict(zip(zones_df["LocationID"], zones_df["Zone"]))
-            trips_df["pickup_zone_name"] = trips_df["PULocationID"].map(zone_dict)
+        pu_col = (
+            "pulocation_id"
+            if "pulocation_id" in trips_df.columns
+            else "PULocationID" if "PULocationID" in trips_df.columns else None
+        )
+        if not trips_df.empty and pu_col and not zones_df.empty:
+            zone_id_col = "LocationID" if "LocationID" in zones_df.columns else "location_id"
+            zone_name_col = "Zone" if "Zone" in zones_df.columns else "pickup_zone_name"
+            zone_dict = dict(zip(zones_df[zone_id_col], zones_df[zone_name_col]))
+            trips_df["pickup_zone_name"] = trips_df[pu_col].map(zone_dict)
 
         totals_dict = {
             "total_trips": len(trips_df),
@@ -153,6 +162,9 @@ def load_dashboard_data():
             trips_df["rush_hour_status"] = (
                 trips_df["is_peak_hour"].map(peak_map).fillna("Off-Peak")
             )
+    else:
+        # Prevent caching empty dataframes during transient DB locks
+        st.cache_data.clear()
 
     return trips_df, zones_df, totals_dict
 
@@ -175,9 +187,11 @@ def main():
 
     if trips_df.empty:
         st.warning(
-            "⚠️ No dataset found. Please run the pipeline ingestion step first: "
-            "`python -m src.ingestion.download_taxi_data --year 2025 --months 1`"
+            "⚠️ No dataset found or database cache refreshing. Please click below to reload."
         )
+        if st.button("🔄 Reload Dashboard Data"):
+            st.cache_data.clear()
+            st.rerun()
         st.stop()
 
     # 2. Render Sidebar Filters & Return Filtered Dataset
