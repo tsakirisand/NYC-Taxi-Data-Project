@@ -10,8 +10,8 @@ def render_reports_page(df: pd.DataFrame):
     st.markdown("## 💡 Executive Analytics & Urban Mobility Report")
     st.markdown("---")
 
-    # Key Executive Insight Cards
-    c1, c2, c3 = st.columns(3)
+    # Key Executive Insight Cards (4-column grid)
+    c1, c2, c3, c4 = st.columns(4)
 
     with c1:
         st.markdown(
@@ -49,12 +49,24 @@ def render_reports_page(df: pd.DataFrame):
             unsafe_allow_html=True,
         )
 
+    with c4:
+        st.markdown(
+            """
+            <div class="metric-card" style="border-left-color: #F59E0B;">
+                <div class="metric-label">ETL Validation Rate</div>
+                <div class="metric-value">93.61%</div>
+                <div class="metric-badge">🛡️ 3.25M Clean Validated Rows</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Action Controls: Download Report .md or Export Summary CSV
+    # Action Controls: Download Report .md, Export Summary CSV, or Export JSON
     report_path = Path(__file__).resolve().parent.parent.parent / "reports" / "executive_data_report.md"
-    
-    col_dl1, col_dl2 = st.columns(2)
+
+    col_dl1, col_dl2, col_dl3 = st.columns(3)
 
     with col_dl1:
         if report_path.exists():
@@ -85,6 +97,27 @@ def render_reports_page(df: pd.DataFrame):
                 data=csv_data,
                 file_name="nyc_hourly_taxi_analytics.csv",
                 mime="text/csv",
+                use_container_width=True,
+            )
+
+    with col_dl3:
+        if not df.empty and "pickup_zone_name" in df.columns:
+            zone_summary = (
+                df.groupby("pickup_zone_name")
+                .agg(
+                    trips=("fare_amount", "count"),
+                    total_revenue=("total_amount", "sum"),
+                    avg_fare=("fare_amount", "mean"),
+                )
+                .sort_values(by="total_revenue", ascending=False)
+                .head(20)
+                .to_json(orient="index")
+            )
+            st.download_button(
+                label="🌐 Export Top Zones Analytics (.json)",
+                data=zone_summary,
+                file_name="nyc_top_zones_summary.json",
+                mime="application/json",
                 use_container_width=True,
             )
 
