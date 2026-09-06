@@ -80,11 +80,14 @@ class DataValidator:
         null_ts_mask = df[pickup_col].isna() | df[dropoff_col].isna()
         metrics["failed_checks"]["null_timestamps"] = int(null_ts_mask.sum())
 
-        # 2. Invalid timestamps (dropoff before pickup or unreasonable range)
+        # 2. Invalid timestamps (dropoff before pickup, unreasonable duration, or out-of-year dates)
         duration_minutes = (df[dropoff_col] - df[pickup_col]).dt.total_seconds() / 60.0
-        invalid_ts_mask = (df[dropoff_col] <= df[pickup_col]) | (
-            duration_minutes > 1440
-        )  # > 24 hours
+        invalid_ts_mask = (
+            (df[dropoff_col] <= df[pickup_col])
+            | (duration_minutes > 1440)
+            | (df[pickup_col].dt.year < 2025)
+            | (df[pickup_col].dt.year > 2026)
+        )
         metrics["failed_checks"]["invalid_timestamps"] = int(invalid_ts_mask.sum())
 
         # 3. Negative trip distances

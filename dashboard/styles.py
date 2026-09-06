@@ -178,35 +178,31 @@ def inject_custom_css():
             border: none !important;
         }
 
-        /* Hide radio circle dot icon completely in Streamlit */
-        [data-testid="stSidebar"] [data-testid="stRadio"] label > *:not([data-testid="stMarkdownContainer"]) {
+        /* Hide radio circle input dot only */
+        [data-testid="stSidebar"] [data-testid="stRadio"] label input[type="radio"] {
             display: none !important;
-            visibility: hidden !important;
-            width: 0 !important;
-            height: 0 !important;
-            opacity: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            position: absolute !important;
-            left: -9999px !important;
-            pointer-events: none !important;
         }
 
-        [data-testid="stSidebar"] [data-testid="stRadio"] label [data-testid="stMarkdownContainer"] {
+        [data-testid="stSidebar"] [data-testid="stRadio"] label div[aria-hidden="true"] {
+            display: none !important;
+        }
+
+        /* Force markdown text container inside label to be fully visible */
+        [data-testid="stSidebar"] [data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] {
             display: block !important;
             visibility: visible !important;
-            width: auto !important;
-            height: auto !important;
-            position: static !important;
             opacity: 1 !important;
+            width: 100% !important;
         }
 
-        /* Radio label text */
-        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label p {
-            font-size: 1.05rem !important;
+        [data-testid="stSidebar"] [data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {
+            font-size: 1.0rem !important;
             font-weight: 600 !important;
             color: #94A3B8 !important;
             margin: 0 !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
         }
 
         /* Hover state for inactive items */
@@ -219,10 +215,16 @@ def inject_custom_css():
         }
 
         /* Active Selected Pill matching user photo */
-        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked),
-        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label[aria-checked="true"] {
+        [data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked),
+        [data-testid="stSidebar"] [data-testid="stRadio"] label[aria-checked="true"] {
             background-color: #DBEAFE !important;
             border-radius: 10px !important;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) p,
+        [data-testid="stSidebar"] [data-testid="stRadio"] label[aria-checked="true"] p {
+            color: #0F172A !important;
+            font-weight: 800 !important;
         }
 
         [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p,
