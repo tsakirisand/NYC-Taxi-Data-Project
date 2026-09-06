@@ -1,44 +1,19 @@
-"""Sidebar Filter Controls & Cache Management Component.
-
-Inspired by Greek-Tourism-Analytics-Project sidebar structure.
-"""
+"""Sidebar Filter Controls Component."""
 
 import pandas as pd
 import streamlit as st
-from src.utils.config import settings
-
-
-def clear_dashboard_cache():
-    """Clear Streamlit data cache on user click."""
-    st.cache_data.clear()
-    st.toast("Cache cleared successfully!", icon="🧹")
 
 
 def render_sidebar_filters(
     trips_df: pd.DataFrame, zones_df: pd.DataFrame
 ) -> pd.DataFrame:
-    """Render sidebar control panel matching Greek Tourism project architecture."""
-    st.sidebar.markdown("### 🚕 NYC Taxi Analytics")
-    st.sidebar.caption("Enterprise End-to-End Data Pipeline")
-    st.sidebar.markdown("---")
-
-    # 1. System Status Indicator
-    db_engine = settings.DB_ENGINE_TYPE.upper()
-    st.sidebar.info(
-        f"**Database**: Active (`{db_engine}`)\n\n" f"**Pipeline**: Airflow & PySpark"
-    )
-
-    # 2. System Actions (Cache Management)
-    if st.sidebar.button("🧹 Clear App Cache", use_container_width=True):
-        clear_dashboard_cache()
-
-    st.sidebar.markdown("---")
+    """Render clean interactive sidebar filter panel."""
     st.sidebar.markdown("### 🔍 Global Filters")
 
     if trips_df.empty:
         return trips_df
 
-    # 3. Month Filter
+    # 1. Month Filter
     available_months = (
         sorted(trips_df["pickup_month"].unique())
         if "pickup_month" in trips_df.columns
@@ -66,7 +41,7 @@ def render_sidebar_filters(
         default=available_months,
     )
 
-    # 4. Pickup Zone Filter
+    # 2. Pickup Zone Filter
     if "pickup_zone_name" in trips_df.columns:
         zone_options = sorted(trips_df["pickup_zone_name"].dropna().unique())
         selected_zones = st.sidebar.multiselect(
@@ -75,7 +50,7 @@ def render_sidebar_filters(
     else:
         selected_zones = []
 
-    # 5. Payment Method Filter
+    # 3. Payment Method Filter
     payment_map = {1: "Credit Card", 2: "Cash", 3: "No Charge", 4: "Dispute"}
     selected_payments = st.sidebar.multiselect(
         "Payment Methods",
@@ -84,7 +59,7 @@ def render_sidebar_filters(
         default=list(payment_map.keys()),
     )
 
-    # 6. Distance & Fare Range Sliders
+    # 4. Distance & Fare Range Sliders
     max_dist_val = (
         float(trips_df["trip_distance"].max())
         if "trip_distance" in trips_df.columns

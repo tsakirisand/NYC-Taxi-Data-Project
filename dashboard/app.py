@@ -157,19 +157,6 @@ def load_dashboard_data():
 
 
 def main():
-    # Page Navigation Selector in Sidebar matching Greek Tourism UI
-    st.sidebar.markdown("### 📌 Navigation")
-    selected_page = st.sidebar.radio(
-        "Select Page",
-        options=[
-            "📊 Executive Overview",
-            "📍 Spatial & Zone Analytics",
-            "💳 Economics & SQL Workbench",
-        ],
-        label_visibility="collapsed",
-    )
-    st.sidebar.markdown("---")
-
     trips_df, zones_df, totals_dict = load_dashboard_data()
 
     if trips_df.empty:
@@ -179,53 +166,40 @@ def main():
         )
         st.stop()
 
-    # Render Sidebar Filters & Return Filtered Dataset
+    # 1. Render Sidebar Filters & Return Filtered Dataset
     filtered_df = render_sidebar_filters(trips_df, zones_df)
 
-    # Render Selected Page View
-    if "Executive Overview" in selected_page:
-        # Header Banner & KPI Cards ONLY on Main Page
-        st.markdown(
-            """
-            <div class="main-header">
-                <h1 class="main-header-title">🚕 NYC Yellow Taxi Executive Analytics</h1>
-                <p class="main-header-subtitle">
-                    Enterprise End-to-End Data Pipeline • PySpark Distributed Compute • PostgreSQL Data Warehouse
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    # 2. Main Executive Header Banner
+    st.markdown(
+        """
+        <div class="main-header">
+            <h1 class="main-header-title">🚕 NYC Yellow Taxi Analytics</h1>
+            <p class="main-header-subtitle">
+                Enterprise End-to-End Data Pipeline • PySpark Distributed Compute • PostgreSQL Data Warehouse
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # 3. Interactive Sliding Navigation Tabs ("Slidetab")
+    tab_overview, tab_spatial, tab_economics = st.tabs(
+        [
+            "📊 Executive Overview",
+            "📍 Spatial & Zone Analytics",
+            "💳 Economics & SQL Workbench",
+        ]
+    )
+
+    with tab_overview:
         render_kpi_cards(filtered_df, totals_dict=totals_dict)
         st.markdown("<br>", unsafe_allow_html=True)
         render_demand_page(filtered_df)
 
-    elif "Spatial" in selected_page:
-        st.markdown(
-            """
-            <div class="main-header">
-                <h1 class="main-header-title">📍 Spatial & Taxi Zone Performance</h1>
-                <p class="main-header-subtitle">
-                    Pickup Zone Rankings • Geographic Demand Distribution • Revenue Hotspots
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    with tab_spatial:
         render_spatial_page(filtered_df)
 
-    elif "Economics" in selected_page:
-        st.markdown(
-            """
-            <div class="main-header">
-                <h1 class="main-header-title">💳 Economics, Speed & SQL Workbench</h1>
-                <p class="main-header-subtitle">
-                    Payment Method Split • Tipping Behavior • Velocity Profiles • Interactive SQL Editor
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    with tab_economics:
         render_economics_page(filtered_df)
 
 

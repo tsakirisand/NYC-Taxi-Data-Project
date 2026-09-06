@@ -123,27 +123,41 @@ def inject_custom_css():
             transition: all 0.2s ease;
         }
 
-        /* Tabs customization */
+        /* Sliding Tab Navigation Bar */
         .stTabs [data-baseweb="tab-list"] {
-            gap: 8px;
-            border-bottom: 1px solid #334155;
-            padding-bottom: 6px;
+            gap: 12px;
+            background-color: #1E293B;
+            padding: 8px 12px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            margin-bottom: 1.5rem;
         }
 
         .stTabs [data-baseweb="tab"] {
-            background-color: #1E293B;
+            height: 44px;
+            background-color: transparent;
             border-radius: 8px;
             color: #94A3B8;
-            font-weight: 600;
-            font-size: 0.88rem;
-            border: 1px solid #334155;
-            padding: 0 16px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            border: none;
+            padding: 0 24px;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .stTabs [data-baseweb="tab"]:hover {
+            color: #F8FAFC;
+            background-color: rgba(255, 255, 255, 0.05);
         }
 
         .stTabs [aria-selected="true"] {
             background-color: #005BAE !important;
             color: #FFFFFF !important;
-            border-color: #38BDF8 !important;
+            box-shadow: 0 4px 14px rgba(0, 91, 174, 0.35) !important;
+        }
+
+        .stTabs [data-baseweb="tab-border"] {
+            display: none;
         }
         </style>
     """
