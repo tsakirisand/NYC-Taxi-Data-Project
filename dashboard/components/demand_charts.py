@@ -1,4 +1,4 @@
-"""Demand & Hourly Trends Component."""
+"""Executive Overview & Demand Trends Component (Page 1)."""
 
 import pandas as pd
 import plotly.express as px
@@ -6,16 +6,19 @@ import streamlit as st
 from dashboard.styles import get_plotly_layout_defaults
 
 
-def render_demand_tab(df: pd.DataFrame):
-    """Render demand and time-series charts tab."""
+def render_demand_page(df: pd.DataFrame):
+    """Render Page 1: Executive Overview & Demand Trends (Max 2 charts)."""
     if df.empty:
         st.info("No trip records available for demand analysis.")
         return
 
+    st.markdown("## 📊 Executive Overview & Demand Volume")
+    st.markdown("---")
+
     c1, c2 = st.columns(2)
 
     with c1:
-        st.subheader("🔥 Hourly Demand & Peak Rush Hours")
+        st.markdown("### 🔥 Hourly Trip Demand & Peak Hours")
         if "pickup_hour" in df.columns:
             hourly_df = (
                 df.groupby("pickup_hour")
@@ -38,13 +41,13 @@ def render_demand_tab(df: pd.DataFrame):
                     "trips": "Total Trips",
                     "revenue": "Total Revenue ($)",
                 },
-                title="Hourly Demand Profile",
+                title="Hourly Trip Demand Profile",
             )
-            fig_hour.update_layout(**get_plotly_layout_defaults(), height=380)
+            fig_hour.update_layout(**get_plotly_layout_defaults(), height=420)
             st.plotly_chart(fig_hour, use_container_width=True)
 
     with c2:
-        st.subheader("📅 Demand Volume by Day of Week")
+        st.markdown("### 📅 Day of Week Volume Curve")
         if "pickup_day_of_week" in df.columns:
             dow_order = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
             dow_df = (
@@ -71,7 +74,7 @@ def render_demand_tab(df: pd.DataFrame):
                     "pickup_day_of_week": "Day of Week",
                     "trips": "Trip Volume",
                 },
-                title="Day of Week Demand Curve",
+                title="Weekly Trip Volume Profile",
             )
-            fig_dow.update_layout(**get_plotly_layout_defaults(), height=380)
+            fig_dow.update_layout(**get_plotly_layout_defaults(), height=420)
             st.plotly_chart(fig_dow, use_container_width=True)

@@ -1,24 +1,41 @@
-"""KPI Metric Cards Component."""
-
+from typing import Dict, Optional
 import pandas as pd
 import streamlit as st
 
 
-def render_kpi_cards(df: pd.DataFrame):
+def render_kpi_cards(df: pd.DataFrame, totals_dict: Optional[Dict[str, float]] = None):
     """Render 6 KPI cards across columns with modern formatting."""
     if df.empty:
         return
 
-    total_trips = len(df)
-    total_revenue = df["total_amount"].sum() if "total_amount" in df.columns else 0.0
-    avg_fare = df["fare_amount"].mean() if "fare_amount" in df.columns else 0.0
-    avg_distance = df["trip_distance"].mean() if "trip_distance" in df.columns else 0.0
-    avg_duration = (
-        df["trip_duration_minutes"].mean()
-        if "trip_duration_minutes" in df.columns
-        else 0.0
-    )
-    avg_tip = df["tip_percentage"].mean() if "tip_percentage" in df.columns else 0.0
+    if totals_dict and len(df) >= 300000:
+        total_trips = int(totals_dict.get("total_trips", len(df)))
+        total_revenue = float(
+            totals_dict.get("total_revenue", df["total_amount"].sum())
+        )
+        avg_fare = float(totals_dict.get("avg_fare", df["fare_amount"].mean()))
+        avg_distance = float(
+            totals_dict.get("avg_distance", df["trip_distance"].mean())
+        )
+        avg_duration = float(
+            totals_dict.get("avg_duration", df["trip_duration_minutes"].mean())
+        )
+        avg_tip = float(totals_dict.get("avg_tip", df["tip_percentage"].mean()))
+    else:
+        total_trips = len(df)
+        total_revenue = (
+            df["total_amount"].sum() if "total_amount" in df.columns else 0.0
+        )
+        avg_fare = df["fare_amount"].mean() if "fare_amount" in df.columns else 0.0
+        avg_distance = (
+            df["trip_distance"].mean() if "trip_distance" in df.columns else 0.0
+        )
+        avg_duration = (
+            df["trip_duration_minutes"].mean()
+            if "trip_duration_minutes" in df.columns
+            else 0.0
+        )
+        avg_tip = df["tip_percentage"].mean() if "tip_percentage" in df.columns else 0.0
 
     c1, c2, c3, c4, c5, c6 = st.columns(6)
 

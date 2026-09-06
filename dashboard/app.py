@@ -1,7 +1,9 @@
 """NYC Yellow Taxi Data Engineering - Interactive Analytics Portal.
 
-Modular Streamlit Dashboard entrypoint separating features across sidebar control panel
-and 5 dedicated analytical tabs.
+Modular Multi-Page Streamlit Dashboard with 3 focused pages:
+1. Executive Overview & Demand Trends
+2. Spatial & Taxi Zone Performance
+3. Trip Economics, Speed Velocity & SQL Workbench
 """
 
 import sys
@@ -13,20 +15,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
-from dashboard.components.analytics_view import render_analytics_tab  # noqa: E402
-from dashboard.components.demand_charts import render_demand_tab  # noqa: E402
-from dashboard.components.economics_charts import render_economics_tab  # noqa: E402
+from dashboard.components.demand_charts import render_demand_page  # noqa: E402
+from dashboard.components.economics_charts import render_economics_page  # noqa: E402
 from dashboard.components.kpis import render_kpi_cards  # noqa: E402
 from dashboard.components.sidebar import render_sidebar_filters  # noqa: E402
-from dashboard.components.spatial_charts import render_spatial_tab  # noqa: E402
-from dashboard.components.temporal_charts import render_temporal_tab  # noqa: E402
+from dashboard.components.spatial_charts import render_spatial_page  # noqa: E402
 from dashboard.styles import inject_custom_css  # noqa: E402
 from src.database.load_postgres import DatabaseLoader  # noqa: E402
 from src.utils.config import settings  # noqa: E402
 
 # 1. Page Configuration
 st.set_page_config(
-    page_title="NYC Yellow Taxi Data Engineering",
+    page_title="NYC Yellow Taxi Analytics",
     page_icon="🚕",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -36,24 +36,53 @@ st.set_page_config(
 inject_custom_css()
 
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=600)
 def load_dashboard_data():
-    """Load fact trips and taxi zone lookup tables from DB or Parquet fallback."""
+    """Load optimized fact trips sample and exact totals for fast rendering."""
     loader = DatabaseLoader()
     engine = loader.engine
 
     try:
-        trips_df = pd.read_sql(
+        # 1. Instant Exact Dataset Totals
+        kpi_df = pd.read_sql(
             """
-            SELECT f.*, z.zone as pickup_zone_name, z.borough as pickup_borough
-            FROM fact_trips f
-            LEFT JOIN dim_taxi_zone z ON f.pulocation_id = z.location_id
+            SELECT
+                COUNT(*) as total_trips,
+                SUM(total_amount) as total_revenue,
+                AVG(fare_amount) as avg_fare,
+                AVG(trip_distance) as avg_distance,
+                AVG(trip_duration_minutes) as avg_duration,
+                AVG(tip_percentage) as avg_tip
+            FROM fact_trips
             """,
             con=engine,
         )
-        zones_df = pd.read_sql("SELECT * FROM dim_taxi_zone", con=engine)
+        totals_dict = kpi_df.iloc[0].to_dict()
+
+        # 2. Taxi Zone Lookup Table
+        zones_df = pd.read_sql(
+            "SELECT location_id, zone as pickup_zone_name, borough as pickup_borough FROM dim_taxi_zone",
+            con=engine,
+        )
+        zone_dict = dict(zip(zones_df["location_id"], zones_df["pickup_zone_name"]))
+
+        # 3. Fast Column-Pruned Sample for Interactive Charts (300k rows)
+        trips_df = pd.read_sql(
+            """
+            SELECT
+                fare_amount, total_amount, trip_distance,
+                pulocation_id, payment_type,
+                trip_duration_minutes, avg_speed_mph, tip_percentage,
+                pickup_month, pickup_hour, pickup_day_of_week, is_peak_hour
+            FROM fact_trips
+            LIMIT 300000
+            """,
+            con=engine,
+        )
+        trips_df["pickup_zone_name"] = trips_df["pulocation_id"].map(zone_dict)
+
     except Exception:
-        # Fallback to local Parquet files if DB table not yet populated
+        # Fallback to local Parquet files if DB not populated
         fact_path = settings.PROCESSED_DATA_DIR / "fact_trips.parquet"
         val_path = settings.VALIDATED_DATA_DIR / "yellow_tripdata_2025-01.parquet"
         zone_path = settings.REFERENCE_DATA_DIR / "taxi_zone_lookup.csv"
@@ -78,10 +107,52 @@ def load_dashboard_data():
             zone_dict = dict(zip(zones_df["LocationID"], zones_df["Zone"]))
             trips_df["pickup_zone_name"] = trips_df["PULocationID"].map(zone_dict)
 
-    return trips_df, zones_df
+        totals_dict = {
+            "total_trips": len(trips_df),
+            "total_revenue": (
+                trips_df["total_amount"].sum()
+                if "total_amount" in trips_df.columns
+                else 0.0
+            ),
+            "avg_fare": (
+                trips_df["fare_amount"].mean()
+                if "fare_amount" in trips_df.columns
+                else 0.0
+            ),
+            "avg_distance": (
+                trips_df["trip_distance"].mean()
+                if "trip_distance" in trips_df.columns
+                else 0.0
+            ),
+            "avg_duration": (
+                trips_df["trip_duration_minutes"].mean()
+                if "trip_duration_minutes" in trips_df.columns
+                else 0.0
+            ),
+            "avg_tip": (
+                trips_df["tip_percentage"].mean()
+                if "tip_percentage" in trips_df.columns
+                else 0.0
+            ),
+        }
+
+    return trips_df, zones_df, totals_dict
 
 
 def main():
+    # Page Navigation Selector in Sidebar
+    st.sidebar.markdown("## 📌 Navigation Menu")
+    selected_page = st.sidebar.radio(
+        "Select Dashboard Page",
+        options=[
+            "📊 Executive Overview",
+            "📍 Spatial & Zone Analytics",
+            "💳 Economics & SQL Workbench",
+        ],
+        label_visibility="collapsed",
+    )
+    st.sidebar.markdown("---")
+
     # Header Glassmorphism Banner
     st.markdown(
         """
@@ -95,7 +166,7 @@ def main():
         unsafe_allow_html=True,
     )
 
-    trips_df, zones_df = load_dashboard_data()
+    trips_df, zones_df, totals_dict = load_dashboard_data()
 
     if trips_df.empty:
         st.warning(
@@ -104,39 +175,21 @@ def main():
         )
         st.stop()
 
-    # Render Sidebar Controls & Return Filtered Dataset
+    # Render Sidebar Filters & Return Filtered Dataset
     filtered_df = render_sidebar_filters(trips_df, zones_df)
 
-    # Render Top KPI Cards Row
-    render_kpi_cards(filtered_df)
+    # Render Top 6 KPI Metric Cards
+    render_kpi_cards(filtered_df, totals_dict=totals_dict)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Render 5 Separated Feature Tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(
-        [
-            "📊 Executive Overview",
-            "📍 Spatial & Zone Analytics",
-            "💳 Trip Economics & Payments",
-            "⏱️ Temporal & Speed Insights",
-            "💻 SQL Workbench & Data Explorer",
-        ]
-    )
-
-    with tab1:
-        render_demand_tab(filtered_df)
-
-    with tab2:
-        render_spatial_tab(filtered_df)
-
-    with tab3:
-        render_economics_tab(filtered_df)
-
-    with tab4:
-        render_temporal_tab(filtered_df)
-
-    with tab5:
-        render_analytics_tab(filtered_df)
+    # Render Selected Focused Page
+    if "Executive Overview" in selected_page:
+        render_demand_page(filtered_df)
+    elif "Spatial" in selected_page:
+        render_spatial_page(filtered_df)
+    elif "Economics" in selected_page:
+        render_economics_page(filtered_df)
 
 
 if __name__ == "__main__":

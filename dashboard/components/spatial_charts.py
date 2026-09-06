@@ -1,4 +1,4 @@
-"""Spatial & Payment Analysis Component."""
+"""Spatial & Taxi Zone Analytics Component (Page 2)."""
 
 import pandas as pd
 import plotly.express as px
@@ -6,16 +6,19 @@ import streamlit as st
 from dashboard.styles import get_plotly_layout_defaults
 
 
-def render_spatial_tab(df: pd.DataFrame):
-    """Render spatial pickup zones and payment method breakdown tab."""
+def render_spatial_page(df: pd.DataFrame):
+    """Render Page 2: Spatial & Taxi Zone Performance (Max 2 clean charts)."""
     if df.empty:
         st.info("No spatial data available.")
         return
 
+    st.markdown("## 📍 Spatial & Taxi Zone Analytics")
+    st.markdown("---")
+
     c1, c2 = st.columns(2)
 
     with c1:
-        st.subheader("📍 Top Busiest Pickup Taxi Zones")
+        st.markdown("### 📍 Top Busiest Pickup Taxi Zones")
         if "pickup_zone_name" in df.columns:
             top_zones = (
                 df.groupby("pickup_zone_name")
@@ -36,39 +39,41 @@ def render_spatial_tab(df: pd.DataFrame):
                     "trip_count": "Total Pickups",
                     "pickup_zone_name": "Taxi Zone",
                 },
-                title="Top 10 Pickup Zones",
+                title="Top 10 Pickup Locations",
             )
-            fig_zones.update_layout(
-                **get_plotly_layout_defaults(),
-                height=400,
-            )
+            fig_zones.update_layout(**get_plotly_layout_defaults(), height=420)
             fig_zones.update_yaxes(autorange="reversed")
             st.plotly_chart(fig_zones, use_container_width=True)
 
     with c2:
-        st.subheader("💳 Payment Method Distribution")
-        if "payment_type" in df.columns:
-            payment_map = {
-                1: "Credit Card",
-                2: "Cash",
-                3: "No Charge",
-                4: "Dispute",
-            }
-            pay_df = df["payment_type"].map(payment_map).value_counts().reset_index()
-            pay_df.columns = ["Payment Method", "Count"]
-
-            fig_pay = px.pie(
-                pay_df,
-                names="Payment Method",
-                values="Count",
-                hole=0.45,
-                color_discrete_sequence=[
-                    "#06b6d4",
-                    "#f59e0b",
-                    "#ec4899",
-                    "#8b5cf6",
-                ],
-                title="Payment Type Split",
+        st.markdown("### 🚖 Most Profitable Taxi Zones")
+        if "pickup_zone_name" in df.columns and "total_amount" in df.columns:
+            revenue_zones = (
+                df.groupby("pickup_zone_name")
+                .agg(
+                    total_revenue=("total_amount", "sum"),
+                    avg_fare=("fare_amount", "mean"),
+                    trips=("fare_amount", "count"),
+                )
+                .reset_index()
+                .sort_values("total_revenue", ascending=False)
+                .head(10)
             )
-            fig_pay.update_layout(**get_plotly_layout_defaults(), height=400)
-            st.plotly_chart(fig_pay, use_container_width=True)
+
+            fig_rev = px.bar(
+                revenue_zones,
+                x="total_revenue",
+                y="pickup_zone_name",
+                orientation="h",
+                color="avg_fare",
+                color_continuous_scale="Cividis",
+                labels={
+                    "total_revenue": "Total Revenue ($)",
+                    "pickup_zone_name": "Taxi Zone",
+                    "avg_fare": "Avg Fare ($)",
+                },
+                title="Top 10 Grossing Taxi Zones",
+            )
+            fig_rev.update_layout(**get_plotly_layout_defaults(), height=420)
+            fig_rev.update_yaxes(autorange="reversed")
+            st.plotly_chart(fig_rev, use_container_width=True)

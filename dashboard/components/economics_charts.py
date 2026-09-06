@@ -1,23 +1,26 @@
-"""Trip Economics & Payment Analysis Component."""
+"""Trip Economics, Speed Profile & SQL Workbench Component (Page 3)."""
 
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+from dashboard.components.analytics_view import render_analytics_tab
 from dashboard.styles import get_plotly_layout_defaults
 
 
-def render_economics_tab(df: pd.DataFrame):
-    """Render payment methods, tip propensity, and fare/distance distributions."""
+def render_economics_page(df: pd.DataFrame):
+    """Render Page 3: Economics, Speed Velocity Profile & SQL Workbench."""
     if df.empty:
         st.info("No data available for trip economics.")
         return
 
-    st.markdown("### 💳 Economics, Tip Propensity & Distributions")
+    st.markdown("## 💳 Economics, Speed Velocity & SQL Workbench")
+    st.markdown("---")
 
+    # --- Section 1: Payment Split & Tip Propensity ---
+    st.markdown("### 💳 Section 1: Payment Split & Tipping Behavior")
     c1, c2 = st.columns(2)
 
     with c1:
-        st.subheader("💳 Payment Method Split")
         if "payment_type" in df.columns:
             payment_map = {
                 1: "Credit Card",
@@ -39,13 +42,22 @@ def render_economics_tab(df: pd.DataFrame):
                     "#ec4899",
                     "#8b5cf6",
                 ],
-                title="Trip Volume by Payment Method",
+                title="Payment Method Breakdown",
             )
-            fig_pay.update_layout(**get_plotly_layout_defaults(), height=380)
+            fig_pay.update_layout(
+                **get_plotly_layout_defaults(),
+                height=380,
+                legend=dict(
+                    orientation="v",
+                    y=0.5,
+                    x=1.02,
+                    xanchor="left",
+                    yanchor="middle",
+                ),
+            )
             st.plotly_chart(fig_pay, use_container_width=True)
 
     with c2:
-        st.subheader("✨ Tip Propensity & Tipped Trips")
         if "tip_amount" in df.columns:
             tipped_count = (df["tip_amount"] > 0).sum()
             untipped_count = len(df) - tipped_count
@@ -73,34 +85,84 @@ def render_economics_tab(df: pd.DataFrame):
 
     st.markdown("---")
 
+    # --- Section 2: City Speed Velocity Profile ---
+    st.markdown("### ⏱️ Section 2: City Velocity & Rush Hour Performance")
     c3, c4 = st.columns(2)
 
     with c3:
-        st.subheader("💵 Fare Amount Distribution")
-        if "fare_amount" in df.columns:
-            fare_filtered = df[(df["fare_amount"] >= 0) & (df["fare_amount"] <= 100)]
-            fig_fare = px.histogram(
-                fare_filtered,
-                x="fare_amount",
-                nbins=35,
-                title="Fare Distribution ($0 - $100)",
-                color_discrete_sequence=["#ec4899"],
-                labels={"fare_amount": "Fare Amount ($)"},
+        if "pickup_hour" in df.columns and "avg_speed_mph" in df.columns:
+            speed_df = df.groupby("pickup_hour")["avg_speed_mph"].mean().reset_index()
+            fig_speed = px.line(
+                speed_df,
+                x="pickup_hour",
+                y="avg_speed_mph",
+                markers=True,
+                line_shape="spline",
+                color_discrete_sequence=["#06b6d4"],
+                labels={
+                    "pickup_hour": "Hour of Day (0-23)",
+                    "avg_speed_mph": "Average Speed (mph)",
+                },
+                title="City Velocity Profile Across 24 Hours",
             )
-            fig_fare.update_layout(**get_plotly_layout_defaults(), height=360)
-            st.plotly_chart(fig_fare, use_container_width=True)
+            fig_speed.update_layout(**get_plotly_layout_defaults(), height=380)
+            st.plotly_chart(fig_speed, use_container_width=True)
 
     with c4:
-        st.subheader("📏 Trip Distance Distribution")
-        if "trip_distance" in df.columns:
-            dist_filtered = df[(df["trip_distance"] > 0) & (df["trip_distance"] <= 30)]
-            fig_dist = px.histogram(
-                dist_filtered,
-                x="trip_distance",
-                nbins=35,
-                title="Distance Distribution (0 - 30 Miles)",
-                color_discrete_sequence=["#8b5cf6"],
-                labels={"trip_distance": "Trip Distance (Miles)"},
+        # Robust Peak Hour logic
+        peak_map = {
+            True: "Peak Rush Hour",
+            False: "Off-Peak",
+            1: "Peak Rush Hour",
+            0: "Off-Peak",
+            "1": "Peak Rush Hour",
+            "0": "Off-Peak",
+            "True": "Peak Rush Hour",
+            "False": "Off-Peak",
+        }
+        peak_df = df.copy()
+        if "is_peak_hour" in peak_df.columns:
+            peak_df["Peak Category"] = (
+                peak_df["is_peak_hour"].map(peak_map).fillna("Off-Peak")
             )
-            fig_dist.update_layout(**get_plotly_layout_defaults(), height=360)
-            st.plotly_chart(fig_dist, use_container_width=True)
+        else:
+            is_peak = (
+                peak_df["pickup_day_of_week"].isin(["Mon", "Tue", "Wed", "Thu", "Fri"])
+            ) & (
+                peak_df["pickup_hour"].between(7, 9)
+                | peak_df["pickup_hour"].between(16, 19)
+            )
+            peak_df["Peak Category"] = is_peak.map(
+                {True: "Peak Rush Hour", False: "Off-Peak"}
+            )
+
+        peak_summary = (
+            peak_df.groupby("Peak Category")
+            .agg(
+                avg_duration=("trip_duration_minutes", "mean"),
+                avg_speed=("avg_speed_mph", "mean"),
+            )
+            .reset_index()
+        )
+
+        fig_peak = px.bar(
+            peak_summary,
+            x="Peak Category",
+            y="avg_duration",
+            color="Peak Category",
+            color_discrete_map={
+                "Peak Rush Hour": "#ec4899",
+                "Off-Peak": "#f59e0b",
+            },
+            text_auto=".1f",
+            labels={"avg_duration": "Avg Duration (Minutes)"},
+            title="Trip Duration: Peak vs Off-Peak",
+        )
+        fig_peak.update_layout(**get_plotly_layout_defaults(), height=380)
+        st.plotly_chart(fig_peak, use_container_width=True)
+
+    st.markdown("---")
+
+    # --- Section 3: Interactive SQL Workbench ---
+    st.markdown("### 💻 Section 3: Interactive SQL Workbench & Data Explorer")
+    render_analytics_tab(df)
