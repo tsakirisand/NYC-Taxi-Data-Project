@@ -159,12 +159,11 @@ def load_dashboard_data():
 def main():
     # 1. Sidebar Navigation Menu Styled as Pill Tabs matching user screenshot
     selected_page = st.sidebar.radio(
-        "Navigation Menu",
+        "Select Page",
         options=[
-            "🏛️ Dashboard",
-            "📈 Demand Trends",
-            "🗺️ Spatial & Zones",
-            "💡 Economics & SQL",
+            "📊 Executive Overview",
+            "📍 Spatial & Zone Analytics",
+            "💳 Economics & SQL Workbench",
         ],
         label_visibility="collapsed",
     )
@@ -183,7 +182,7 @@ def main():
     filtered_df = render_sidebar_filters(trips_df, zones_df)
 
     # 3. Main Content Views based on Selected Sidebar Navigation Pill Tab
-    if "Dashboard" in selected_page:
+    if "Executive Overview" in selected_page:
         st.markdown(
             """
             <div class="main-header">
@@ -195,27 +194,17 @@ def main():
             """,
             unsafe_allow_html=True,
         )
+        # 3x2 KPI Cards
         render_kpi_cards(filtered_df, totals_dict=totals_dict)
-
-    elif "Trends" in selected_page:
-        st.markdown(
-            """
-            <div class="main-header">
-                <h1 class="main-header-title">📈 Hourly & Weekly Demand Trends</h1>
-                <p class="main-header-subtitle">
-                    Peak Hour Curves • Day of Week Dynamics • Volume Profiles
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.markdown("<br>", unsafe_allow_html=True)
+        # Visual Charts on Main Page (Hourly Demand & Weekly Volume Profile)
         render_demand_page(filtered_df)
 
     elif "Spatial" in selected_page:
         st.markdown(
             """
             <div class="main-header">
-                <h1 class="main-header-title">🗺️ Geographic & Taxi Zone Analytics</h1>
+                <h1 class="main-header-title">📍 Spatial & Taxi Zone Performance</h1>
                 <p class="main-header-subtitle">
                     Pickup Zone Rankings • Geographic Demand Distribution • Revenue Hotspots
                 </p>
@@ -229,7 +218,7 @@ def main():
         st.markdown(
             """
             <div class="main-header">
-                <h1 class="main-header-title">💡 Economics, Velocity & SQL Workbench</h1>
+                <h1 class="main-header-title">💳 Economics, Speed & SQL Workbench</h1>
                 <p class="main-header-subtitle">
                     Payment Method Split • Tipping Behavior • Velocity Profiles • Interactive SQL Editor
                 </p>
