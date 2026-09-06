@@ -205,9 +205,7 @@ def load_dashboard_data():
                 trips_df["is_peak_hour"].map(peak_map).fillna("Off-Peak")
             )
     else:
-        # Prevent caching empty dataframes during transient DB locks
-        st.cache_data.clear()
-
+        totals_dict["unfiltered_len"] = len(trips_df)
     return trips_df, zones_df, totals_dict
 
 
@@ -236,6 +234,10 @@ def main():
             st.rerun()
         st.stop()
 
+    # Calculate sample ratio for full dataset metrics scaling
+    total_real = totals_dict.get("total_trips", len(trips_df))
+    sample_ratio = total_real / len(trips_df) if len(trips_df) > 0 else 1.0
+
     # 2. Render Sidebar Filters & Return Filtered Dataset
     filtered_df = render_sidebar_filters(trips_df, zones_df)
 
@@ -253,7 +255,9 @@ def main():
             unsafe_allow_html=True,
         )
         # 3x2 KPI Cards
-        render_kpi_cards(filtered_df, totals_dict=totals_dict)
+        render_kpi_cards(
+            filtered_df, totals_dict=totals_dict, sample_ratio=sample_ratio
+        )
         st.markdown("<br>", unsafe_allow_html=True)
         # Visual Charts on Main Page (Hourly Demand & Weekly Volume Profile)
         render_demand_page(filtered_df)

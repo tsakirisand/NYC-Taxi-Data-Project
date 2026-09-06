@@ -23,16 +23,29 @@ def format_count(val: float) -> str:
     return f"{int(val):,}"
 
 
-def render_kpi_cards(df: pd.DataFrame, totals_dict: Optional[Dict[str, float]] = None):
+def render_kpi_cards(
+    df: pd.DataFrame,
+    totals_dict: Optional[Dict[str, float]] = None,
+    sample_ratio: float = 1.0,
+):
     """Render 6 clean metric cards across a 3x2 grid matching Greek Tourism UI style."""
     if df.empty:
         return
 
-    if totals_dict and len(df) >= 300000:
-        total_trips = int(totals_dict.get("total_trips", len(df)))
-        total_revenue = float(
-            totals_dict.get("total_revenue", df["total_amount"].sum())
+    # Check if unfiltered dataset is being rendered
+    is_unfiltered = (
+        totals_dict
+        and "total_trips" in totals_dict
+        and totals_dict["total_trips"] > 0
+        and (
+            "unfiltered_len" not in totals_dict
+            or len(df) >= totals_dict.get("unfiltered_len", len(df))
         )
+    )
+
+    if is_unfiltered:
+        total_trips = int(totals_dict["total_trips"])
+        total_revenue = float(totals_dict["total_revenue"])
         avg_fare = float(totals_dict.get("avg_fare", df["fare_amount"].mean()))
         avg_distance = float(
             totals_dict.get("avg_distance", df["trip_distance"].mean())
@@ -42,20 +55,33 @@ def render_kpi_cards(df: pd.DataFrame, totals_dict: Optional[Dict[str, float]] =
         )
         avg_tip = float(totals_dict.get("avg_tip", df["tip_percentage"].mean()))
     else:
-        total_trips = len(df)
+        scale = max(sample_ratio, 1.0)
+        total_trips = int(len(df) * scale)
         total_revenue = (
-            df["total_amount"].sum() if "total_amount" in df.columns else 0.0
-        )
-        avg_fare = df["fare_amount"].mean() if "fare_amount" in df.columns else 0.0
-        avg_distance = (
-            df["trip_distance"].mean() if "trip_distance" in df.columns else 0.0
-        )
-        avg_duration = (
-            df["trip_duration_minutes"].mean()
-            if "trip_duration_minutes" in df.columns
+            float(df["total_amount"].sum() * scale)
+            if "total_amount" in df.columns
             else 0.0
         )
-        avg_tip = df["tip_percentage"].mean() if "tip_percentage" in df.columns else 0.0
+        avg_fare = (
+            float(df["fare_amount"].mean())
+            if "fare_amount" in df.columns and not df.empty
+            else 0.0
+        )
+        avg_distance = (
+            float(df["trip_distance"].mean())
+            if "trip_distance" in df.columns and not df.empty
+            else 0.0
+        )
+        avg_duration = (
+            float(df["trip_duration_minutes"].mean())
+            if "trip_duration_minutes" in df.columns and not df.empty
+            else 0.0
+        )
+        avg_tip = (
+            float(df["tip_percentage"].mean())
+            if "tip_percentage" in df.columns and not df.empty
+            else 0.0
+        )
 
     # Row 1: Total Trips, Total Revenue, Avg Fare
     r1_col1, r1_col2, r1_col3 = st.columns(3)
