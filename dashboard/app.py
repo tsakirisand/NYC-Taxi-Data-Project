@@ -136,6 +136,23 @@ def load_dashboard_data():
             ),
         }
 
+    # Clean human-readable transformations
+    if not trips_df.empty:
+        peak_map = {
+            True: "Peak Rush Hour",
+            False: "Off-Peak",
+            1: "Peak Rush Hour",
+            0: "Off-Peak",
+            "1": "Peak Rush Hour",
+            "0": "Off-Peak",
+            "True": "Peak Rush Hour",
+            "False": "Off-Peak",
+        }
+        if "is_peak_hour" in trips_df.columns:
+            trips_df["rush_hour_status"] = (
+                trips_df["is_peak_hour"].map(peak_map).fillna("Off-Peak")
+            )
+
     return trips_df, zones_df, totals_dict
 
 
@@ -153,19 +170,6 @@ def main():
     )
     st.sidebar.markdown("---")
 
-    # Header Glassmorphism Banner
-    st.markdown(
-        """
-        <div class="main-header">
-            <h1 class="main-header-title">🚕 NYC Yellow Taxi Analytics Portal</h1>
-            <p class="main-header-subtitle">
-                Enterprise End-to-End Data Pipeline • PySpark Distributed Compute • PostgreSQL Data Warehouse
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
     trips_df, zones_df, totals_dict = load_dashboard_data()
 
     if trips_df.empty:
@@ -178,17 +182,50 @@ def main():
     # Render Sidebar Filters & Return Filtered Dataset
     filtered_df = render_sidebar_filters(trips_df, zones_df)
 
-    # Render Top 6 KPI Metric Cards
-    render_kpi_cards(filtered_df, totals_dict=totals_dict)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # Render Selected Focused Page
+    # Render Selected Page View
     if "Executive Overview" in selected_page:
+        # Header Banner & KPI Cards ONLY on Main Page
+        st.markdown(
+            """
+            <div class="main-header">
+                <h1 class="main-header-title">🚕 NYC Yellow Taxi Executive Analytics</h1>
+                <p class="main-header-subtitle">
+                    Enterprise End-to-End Data Pipeline • PySpark Distributed Compute • PostgreSQL Data Warehouse
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        render_kpi_cards(filtered_df, totals_dict=totals_dict)
+        st.markdown("<br>", unsafe_allow_html=True)
         render_demand_page(filtered_df)
+
     elif "Spatial" in selected_page:
+        st.markdown(
+            """
+            <div class="main-header">
+                <h1 class="main-header-title">📍 Spatial & Taxi Zone Performance</h1>
+                <p class="main-header-subtitle">
+                    Pickup Zone Rankings • Geographic Demand Distribution • Revenue Hotspots
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         render_spatial_page(filtered_df)
+
     elif "Economics" in selected_page:
+        st.markdown(
+            """
+            <div class="main-header">
+                <h1 class="main-header-title">💳 Economics, Speed & SQL Workbench</h1>
+                <p class="main-header-subtitle">
+                    Payment Method Split • Tipping Behavior • Velocity Profiles • Interactive SQL Editor
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         render_economics_page(filtered_df)
 
 

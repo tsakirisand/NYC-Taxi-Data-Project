@@ -146,7 +146,9 @@ class DatabaseLoader:
             if not val_files:
                 logger.error("No processed or validated parquet files found!")
                 return
-            logger.info(f"Loading fact_trips from {len(val_files)} validated parquet file(s)...")
+            logger.info(
+                f"Loading fact_trips from {len(val_files)} validated parquet file(s)..."
+            )
             df = pd.concat([pd.read_parquet(f) for f in val_files], ignore_index=True)
 
             # Compute features if loading directly from validated parquet

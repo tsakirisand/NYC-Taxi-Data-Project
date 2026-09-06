@@ -109,41 +109,34 @@ def render_economics_page(df: pd.DataFrame):
             st.plotly_chart(fig_speed, use_container_width=True)
 
     with c4:
-        # Robust Peak Hour logic
-        peak_map = {
-            True: "Peak Rush Hour",
-            False: "Off-Peak",
-            1: "Peak Rush Hour",
-            0: "Off-Peak",
-            "1": "Peak Rush Hour",
-            "0": "Off-Peak",
-            "True": "Peak Rush Hour",
-            "False": "Off-Peak",
-        }
         peak_df = df.copy()
-        if "is_peak_hour" in peak_df.columns:
-            peak_df["Peak Category"] = (
-                peak_df["is_peak_hour"].map(peak_map).fillna("Off-Peak")
-            )
-        else:
-            is_peak = (
-                peak_df["pickup_day_of_week"].isin(["Mon", "Tue", "Wed", "Thu", "Fri"])
-            ) & (
-                peak_df["pickup_hour"].between(7, 9)
-                | peak_df["pickup_hour"].between(16, 19)
-            )
-            peak_df["Peak Category"] = is_peak.map(
-                {True: "Peak Rush Hour", False: "Off-Peak"}
-            )
+        if "rush_hour_status" not in peak_df.columns:
+            peak_map = {
+                True: "Peak Rush Hour",
+                False: "Off-Peak",
+                1: "Peak Rush Hour",
+                0: "Off-Peak",
+                "1": "Peak Rush Hour",
+                "0": "Off-Peak",
+                "True": "Peak Rush Hour",
+                "False": "Off-Peak",
+            }
+            if "is_peak_hour" in peak_df.columns:
+                peak_df["rush_hour_status"] = (
+                    peak_df["is_peak_hour"].map(peak_map).fillna("Off-Peak")
+                )
+            else:
+                peak_df["rush_hour_status"] = "Off-Peak"
 
         peak_summary = (
-            peak_df.groupby("Peak Category")
+            peak_df.groupby("rush_hour_status")
             .agg(
                 avg_duration=("trip_duration_minutes", "mean"),
                 avg_speed=("avg_speed_mph", "mean"),
             )
             .reset_index()
         )
+        peak_summary.rename(columns={"rush_hour_status": "Peak Category"}, inplace=True)
 
         fig_peak = px.bar(
             peak_summary,
