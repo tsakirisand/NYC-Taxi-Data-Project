@@ -103,6 +103,7 @@ def render_demand_page(df: pd.DataFrame):
                 avg_fare=("fare_amount", "mean"),
             )
             .reset_index()
+            .sort_values("pickup_month")
         )
         monthly_df["month_name"] = monthly_df["pickup_month"].map(month_map)
 

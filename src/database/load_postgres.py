@@ -137,19 +137,26 @@ class DatabaseLoader:
     def load_fact_trips(
         self, parquet_path: Path = settings.PROCESSED_DATA_DIR / "fact_trips.parquet"
     ) -> None:
-        """Load transformed fact_trips dataset into database."""
-        if parquet_path.exists():
-            logger.info(f"Loading fact_trips from processed path: {parquet_path}...")
-            df = pd.read_parquet(parquet_path)
-        else:
-            val_files = sorted(settings.VALIDATED_DATA_DIR.glob("*.parquet"))
-            if not val_files:
-                logger.error("No processed or validated parquet files found!")
-                return
-            logger.info(
-                f"Loading fact_trips from {len(val_files)} validated parquet file(s)..."
-            )
-            df = pd.concat([pd.read_parquet(f) for f in val_files], ignore_index=True)
+        """Load transformed fact_trips dataset into database file-by-file."""
+        val_files = sorted(settings.VALIDATED_DATA_DIR.glob("*.parquet"))
+        file_list = (
+            val_files
+            if val_files
+            else ([parquet_path] if parquet_path.exists() else [])
+        )
+
+        if not file_list:
+            logger.error("No processed or validated parquet files found!")
+            return
+
+        logger.info(
+            f"Batch inserting fact_trips across {len(file_list)} monthly file(s)..."
+        )
+        total_rows_loaded = 0
+
+        for idx, file_path in enumerate(file_list):
+            logger.info(f"[{idx+1}/{len(file_list)}] Loading {file_path.name}...")
+            df = pd.read_parquet(file_path)
 
             # Compute features if loading directly from validated parquet
             if "trip_duration_minutes" not in df.columns:
@@ -180,39 +187,64 @@ class DatabaseLoader:
                     df["pickup_hour"].between(7, 9) | df["pickup_hour"].between(16, 19)
                 )
 
-        # Generate deterministic synthetic trip_id if not present
-        if "trip_id" not in df.columns:
-            logger.info("Generating synthetic trip_id hashes for facts table...")
-            df["trip_id"] = [
-                hashlib.md5(f"{p_dt}_{pu}_{do}_{idx}".encode()).hexdigest()
-                for idx, (p_dt, pu, do) in enumerate(
-                    zip(
-                        df["tpep_pickup_datetime"],
-                        df["PULocationID"],
-                        df["DOLocationID"],
+            # Generate deterministic synthetic trip_id hash per chunk if not present
+            if "trip_id" not in df.columns:
+                pu_col = (
+                    "PULocationID"
+                    if "PULocationID" in df.columns
+                    else (
+                        "pulocation_id"
+                        if "pulocation_id" in df.columns
+                        else df.columns[0]
                     )
                 )
-            ]
+                do_col = (
+                    "DOLocationID"
+                    if "DOLocationID" in df.columns
+                    else (
+                        "dolocation_id"
+                        if "dolocation_id" in df.columns
+                        else df.columns[1]
+                    )
+                )
+                p_dt_col = (
+                    "tpep_pickup_datetime"
+                    if "tpep_pickup_datetime" in df.columns
+                    else "pickup_datetime"
+                )
 
-        # Rename columns to match DB schema
-        column_mapping = {
-            "PULocationID": "pulocation_id",
-            "DOLocationID": "dolocation_id",
-            "RatecodeID": "rate_code_id",
-            "VendorID": "vendor_id",
-        }
-        df.rename(columns=column_mapping, inplace=True)
+                df["trip_id"] = [
+                    hashlib.md5(f"{p_dt}_{pu}_{do}_{i}".encode()).hexdigest()
+                    for i, (p_dt, pu, do) in enumerate(
+                        zip(df[p_dt_col], df[pu_col], df[do_col])
+                    )
+                ]
 
-        # Lowercase all remaining columns
-        df.columns = [c.lower() for c in df.columns]
+            # Rename columns to match DB schema
+            column_mapping = {
+                "PULocationID": "pulocation_id",
+                "DOLocationID": "dolocation_id",
+                "RatecodeID": "rate_code_id",
+                "VendorID": "vendor_id",
+            }
+            df.rename(columns=column_mapping, inplace=True)
+            df.columns = [c.lower() for c in df.columns]
 
-        logger.info(f"Inserting {len(df):,} rows into fact_trips...")
-        df.to_sql(
-            "fact_trips",
-            con=self.engine,
-            if_exists="replace",
-            index=False,
-            chunksize=5000,
+            if_exists_mode = "replace" if idx == 0 else "append"
+            df.to_sql(
+                "fact_trips",
+                con=self.engine,
+                if_exists=if_exists_mode,
+                index=False,
+                chunksize=10000,
+            )
+            total_rows_loaded += len(df)
+            logger.info(
+                f"Successfully loaded {len(df):,} rows from {file_path.name} into fact_trips."
+            )
+
+        logger.info(
+            f"Finished loading total {total_rows_loaded:,} rows into fact_trips."
         )
         logger.info("Successfully loaded fact_trips.")
 

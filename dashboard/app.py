@@ -39,120 +39,154 @@ inject_custom_css()
 
 @st.cache_data(ttl=600)
 def load_dashboard_data():
-    """Load optimized fact trips sample and exact totals for fast rendering."""
-    loader = DatabaseLoader()
-    engine = loader.engine
+    """Load optimized multi-month fact trips sample and exact annual totals for fast rendering."""
+    val_files = sorted(settings.VALIDATED_DATA_DIR.glob("*.parquet"))
+    zone_path = settings.REFERENCE_DATA_DIR / "taxi_zone_lookup.csv"
+
+    # Taxi Zone Lookup Table
+    if zone_path.exists():
+        zones_df = pd.read_csv(zone_path)
+        z_id = "LocationID" if "LocationID" in zones_df.columns else "location_id"
+        z_name = "Zone" if "Zone" in zones_df.columns else "pickup_zone_name"
+        zone_dict = dict(zip(zones_df[z_id], zones_df[z_name]))
+    else:
+        zones_df = pd.DataFrame()
+        zone_dict = {}
 
     try:
-        # 1. Instant Exact Dataset Totals
-        kpi_df = pd.read_sql(
-            """
+        import duckdb
+
+        con = duckdb.connect()
+        # 1. Exact Dataset Totals across all 12 months (44+ million records)
+        kpi_df = con.query("""
             SELECT
-                COUNT(*) as total_trips,
-                SUM(total_amount) as total_revenue,
-                AVG(fare_amount) as avg_fare,
-                AVG(trip_distance) as avg_distance,
-                AVG(trip_duration_minutes) as avg_duration,
-                AVG(tip_percentage) as avg_tip
-            FROM fact_trips
-            """,
-            con=engine,
-        )
-        if (
-            kpi_df.empty
-            or kpi_df.iloc[0]["total_trips"] is None
-            or kpi_df.iloc[0]["total_trips"] == 0
-        ):
-            raise ValueError("Database table fact_trips is empty or not populated.")
+                count(*) as total_trips,
+                sum(total_amount) as total_revenue,
+                avg(fare_amount) as avg_fare,
+                avg(trip_distance) as avg_distance,
+                avg(epoch(tpep_dropoff_datetime - tpep_pickup_datetime)/60.0) as avg_duration,
+                avg(CASE WHEN fare_amount > 0 THEN (tip_amount / fare_amount) * 100.0 ELSE 0.0 END) as avg_tip
+            FROM 'data/validated/*.parquet'
+            """).df()
+
+        if kpi_df.empty or kpi_df.iloc[0]["total_trips"] == 0:
+            raise ValueError("No records found in validated files.")
 
         totals_dict = kpi_df.iloc[0].to_dict()
 
-        # 2. Taxi Zone Lookup Table
-        zones_df = pd.read_sql(
-            "SELECT location_id, zone as pickup_zone_name, borough as pickup_borough FROM dim_taxi_zone",
-            con=engine,
-        )
-        zone_dict = dict(zip(zones_df["location_id"], zones_df["pickup_zone_name"]))
-
-        # 3. Fast Column-Pruned Sample for Interactive Charts (300k rows)
-        trips_df = pd.read_sql(
-            """
-            SELECT
+        # 2. Representative Multi-Month Stratified Sample for Interactive Charts (25k rows/month)
+        trips_df = con.query("""
+            WITH sampled AS (
+                SELECT *,
+                    month(tpep_pickup_datetime) as pickup_month,
+                    hour(tpep_pickup_datetime) as pickup_hour,
+                    strftime(tpep_pickup_datetime, '%a') as pickup_day_of_week,
+                    epoch(tpep_dropoff_datetime - tpep_pickup_datetime)/60.0 as trip_duration_minutes,
+                    CASE WHEN epoch(tpep_dropoff_datetime - tpep_pickup_datetime) > 0 
+                         THEN trip_distance / (epoch(tpep_dropoff_datetime - tpep_pickup_datetime)/3600.0)
+                         ELSE 0.0 END as avg_speed_mph,
+                    CASE WHEN fare_amount > 0 THEN (tip_amount / fare_amount) * 100.0 ELSE 0.0 END as tip_percentage,
+                    CASE WHEN dayofweek(tpep_pickup_datetime) BETWEEN 1 AND 5 
+                         AND (hour(tpep_pickup_datetime) BETWEEN 7 AND 9 OR hour(tpep_pickup_datetime) BETWEEN 16 AND 19)
+                         THEN true ELSE false END as is_peak_hour,
+                    row_number() OVER (PARTITION BY month(tpep_pickup_datetime)) as rn
+                FROM 'data/validated/*.parquet'
+            )
+            SELECT 
                 fare_amount, total_amount, trip_distance,
-                pulocation_id, payment_type,
+                PULocationID as pulocation_id, payment_type,
                 trip_duration_minutes, avg_speed_mph, tip_percentage,
                 pickup_month, pickup_hour, pickup_day_of_week, is_peak_hour
-            FROM fact_trips
-            LIMIT 300000
-            """,
-            con=engine,
-        )
-        if trips_df.empty:
-            raise ValueError("Database sample query returned empty dataframe.")
+            FROM sampled
+            WHERE rn <= 25000
+            """).df()
 
         trips_df["pickup_zone_name"] = trips_df["pulocation_id"].map(zone_dict)
 
     except Exception:
-        # Fallback to local Parquet files if DB not populated
-        fact_path = settings.PROCESSED_DATA_DIR / "fact_trips.parquet"
-        val_files = sorted(settings.VALIDATED_DATA_DIR.glob("*.parquet"))
-        zone_path = settings.REFERENCE_DATA_DIR / "taxi_zone_lookup.csv"
+        # Fallback to Database / Parquet reading if DuckDB query fails
+        loader = DatabaseLoader()
+        engine = loader.engine
 
-        if fact_path.exists():
-            trips_df = pd.read_parquet(fact_path)
-        elif val_files:
-            trips_df = pd.concat(
-                [pd.read_parquet(f) for f in val_files], ignore_index=True
+        try:
+            kpi_df = pd.read_sql(
+                """
+                SELECT
+                    COUNT(*) as total_trips,
+                    SUM(total_amount) as total_revenue,
+                    AVG(fare_amount) as avg_fare,
+                    AVG(trip_distance) as avg_distance,
+                    AVG(trip_duration_minutes) as avg_duration,
+                    AVG(tip_percentage) as avg_tip
+                FROM fact_trips
+                """,
+                con=engine,
             )
-        else:
-            trips_df = pd.DataFrame()
+            if kpi_df.empty or kpi_df.iloc[0]["total_trips"] in (None, 0):
+                raise ValueError("Database table fact_trips is empty.")
+            totals_dict = kpi_df.iloc[0].to_dict()
 
-        if zone_path.exists():
-            zones_df = pd.read_csv(zone_path)
-        else:
-            zones_df = pd.DataFrame()
-
-        pu_col = (
-            "pulocation_id"
-            if "pulocation_id" in trips_df.columns
-            else "PULocationID" if "PULocationID" in trips_df.columns else None
-        )
-        if not trips_df.empty and pu_col and not zones_df.empty:
-            zone_id_col = (
-                "LocationID" if "LocationID" in zones_df.columns else "location_id"
+            trips_df = pd.read_sql(
+                """
+                SELECT
+                    fare_amount, total_amount, trip_distance,
+                    pulocation_id, payment_type,
+                    trip_duration_minutes, avg_speed_mph, tip_percentage,
+                    CAST(strftime('%m', tpep_pickup_datetime) AS INTEGER) as pickup_month,
+                    CAST(strftime('%H', tpep_pickup_datetime) AS INTEGER) as pickup_hour,
+                    strftime('%a', tpep_pickup_datetime) as pickup_day_of_week,
+                    is_peak_hour
+                FROM fact_trips
+                WHERE (rowid % 140) = 0
+                """,
+                con=engine,
             )
-            zone_name_col = "Zone" if "Zone" in zones_df.columns else "pickup_zone_name"
-            zone_dict = dict(zip(zones_df[zone_id_col], zones_df[zone_name_col]))
-            trips_df["pickup_zone_name"] = trips_df[pu_col].map(zone_dict)
+            trips_df["pickup_zone_name"] = trips_df["pulocation_id"].map(zone_dict)
 
-        totals_dict = {
-            "total_trips": len(trips_df),
-            "total_revenue": (
-                trips_df["total_amount"].sum()
-                if "total_amount" in trips_df.columns
-                else 0.0
-            ),
-            "avg_fare": (
-                trips_df["fare_amount"].mean()
-                if "fare_amount" in trips_df.columns
-                else 0.0
-            ),
-            "avg_distance": (
-                trips_df["trip_distance"].mean()
-                if "trip_distance" in trips_df.columns
-                else 0.0
-            ),
-            "avg_duration": (
-                trips_df["trip_duration_minutes"].mean()
-                if "trip_duration_minutes" in trips_df.columns
-                else 0.0
-            ),
-            "avg_tip": (
-                trips_df["tip_percentage"].mean()
-                if "tip_percentage" in trips_df.columns
-                else 0.0
-            ),
-        }
+        except Exception:
+            if val_files:
+                trips_df = pd.concat(
+                    [pd.read_parquet(f) for f in val_files], ignore_index=True
+                )
+            else:
+                trips_df = pd.DataFrame()
+
+            pu_col = (
+                "pulocation_id"
+                if "pulocation_id" in trips_df.columns
+                else "PULocationID" if "PULocationID" in trips_df.columns else None
+            )
+            if not trips_df.empty and pu_col and not zones_df.empty:
+                trips_df["pickup_zone_name"] = trips_df[pu_col].map(zone_dict)
+
+            totals_dict = {
+                "total_trips": len(trips_df),
+                "total_revenue": (
+                    trips_df["total_amount"].sum()
+                    if "total_amount" in trips_df.columns
+                    else 0.0
+                ),
+                "avg_fare": (
+                    trips_df["fare_amount"].mean()
+                    if "fare_amount" in trips_df.columns
+                    else 0.0
+                ),
+                "avg_distance": (
+                    trips_df["trip_distance"].mean()
+                    if "trip_distance" in trips_df.columns
+                    else 0.0
+                ),
+                "avg_duration": (
+                    trips_df["trip_duration_minutes"].mean()
+                    if "trip_duration_minutes" in trips_df.columns
+                    else 0.0
+                ),
+                "avg_tip": (
+                    trips_df["tip_percentage"].mean()
+                    if "tip_percentage" in trips_df.columns
+                    else 0.0
+                ),
+            }
 
     # Clean human-readable transformations
     if not trips_df.empty:
