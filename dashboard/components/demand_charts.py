@@ -35,7 +35,7 @@ def render_demand_page(df: pd.DataFrame):
                 x="pickup_hour",
                 y="trips",
                 color="revenue",
-                color_continuous_scale="Plasma",
+                color_continuous_scale=["#0284C7", "#005BAE", "#38BDF8"],
                 labels={
                     "pickup_hour": "Hour of Day (0 - 23)",
                     "trips": "Total Trips",
@@ -69,7 +69,7 @@ def render_demand_page(df: pd.DataFrame):
                 x="pickup_day_of_week",
                 y="trips",
                 markers=True,
-                color_discrete_sequence=["#f59e0b"],
+                color_discrete_sequence=["#38BDF8"],
                 labels={
                     "pickup_day_of_week": "Day of Week",
                     "trips": "Trip Volume",

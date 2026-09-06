@@ -1,4 +1,4 @@
-"""KPI Metric Cards Component with Large-Number Formatting."""
+"""KPI Metric Cards Component matching Greek Tourism Analytics UI standard."""
 
 from typing import Dict, Optional
 import pandas as pd
@@ -24,7 +24,7 @@ def format_count(val: float) -> str:
 
 
 def render_kpi_cards(df: pd.DataFrame, totals_dict: Optional[Dict[str, float]] = None):
-    """Render 6 KPI cards across a 3x2 responsive grid preventing text truncation."""
+    """Render 6 clean metric cards across a 3x2 grid matching Greek Tourism UI style."""
     if df.empty:
         return
 
@@ -63,10 +63,10 @@ def render_kpi_cards(df: pd.DataFrame, totals_dict: Optional[Dict[str, float]] =
     with r1_col1:
         st.markdown(
             f"""
-            <div class="kpi-card">
-                <div class="kpi-title">Total Trips</div>
-                <div class="kpi-value">{format_count(total_trips)}</div>
-                <span class="kpi-badge badge-amber">🚕 Exact: {total_trips:,} trips</span>
+            <div class="metric-card">
+                <div class="metric-label">Total Trips</div>
+                <div class="metric-value">{format_count(total_trips)}</div>
+                <div class="metric-badge">🚕 Exact: {total_trips:,} trips</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -75,10 +75,10 @@ def render_kpi_cards(df: pd.DataFrame, totals_dict: Optional[Dict[str, float]] =
     with r1_col2:
         st.markdown(
             f"""
-            <div class="kpi-card">
-                <div class="kpi-title">Total Revenue</div>
-                <div class="kpi-value">{format_currency(total_revenue)}</div>
-                <span class="kpi-badge badge-cyan">💰 Gross: ${total_revenue:,.2f}</span>
+            <div class="metric-card" style="border-left-color: #0284C7;">
+                <div class="metric-label">Total Revenue</div>
+                <div class="metric-value" style="color: #0284C7;">{format_currency(total_revenue)}</div>
+                <div class="metric-badge">💰 Gross: ${total_revenue:,.2f}</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -87,10 +87,10 @@ def render_kpi_cards(df: pd.DataFrame, totals_dict: Optional[Dict[str, float]] =
     with r1_col3:
         st.markdown(
             f"""
-            <div class="kpi-card">
-                <div class="kpi-title">Average Fare</div>
-                <div class="kpi-value">${avg_fare:.2f}</div>
-                <span class="kpi-badge badge-emerald">💵 Per Trip Average</span>
+            <div class="metric-card" style="border-left-color: #10B981;">
+                <div class="metric-label">Average Fare</div>
+                <div class="metric-value" style="color: #10B981;">${avg_fare:.2f}</div>
+                <div class="metric-badge">💵 Per Trip Average</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -104,10 +104,10 @@ def render_kpi_cards(df: pd.DataFrame, totals_dict: Optional[Dict[str, float]] =
     with r2_col1:
         st.markdown(
             f"""
-            <div class="kpi-card">
-                <div class="kpi-title">Average Trip Distance</div>
-                <div class="kpi-value">{avg_distance:.2f} miles</div>
-                <span class="kpi-badge badge-purple">📍 Distance Metric</span>
+            <div class="metric-card" style="border-left-color: #8B5CF6;">
+                <div class="metric-label">Average Distance</div>
+                <div class="metric-value" style="color: #A78BFA;">{avg_distance:.2f} mi</div>
+                <div class="metric-badge">📍 Trip Distance</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -116,10 +116,10 @@ def render_kpi_cards(df: pd.DataFrame, totals_dict: Optional[Dict[str, float]] =
     with r2_col2:
         st.markdown(
             f"""
-            <div class="kpi-card">
-                <div class="kpi-title">Average Trip Duration</div>
-                <div class="kpi-value">{avg_duration:.1f} minutes</div>
-                <span class="kpi-badge badge-rose">⏱️ Duration Metric</span>
+            <div class="metric-card" style="border-left-color: #F59E0B;">
+                <div class="metric-label">Average Duration</div>
+                <div class="metric-value" style="color: #FBBF24;">{avg_duration:.1f} min</div>
+                <div class="metric-badge">⏱️ Trip Time</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -128,10 +128,10 @@ def render_kpi_cards(df: pd.DataFrame, totals_dict: Optional[Dict[str, float]] =
     with r2_col3:
         st.markdown(
             f"""
-            <div class="kpi-card">
-                <div class="kpi-title">Average Tip Percentage</div>
-                <div class="kpi-value">{avg_tip:.1f}%</div>
-                <span class="kpi-badge badge-amber">✨ Tipped Percentage</span>
+            <div class="metric-card" style="border-left-color: #EC4899;">
+                <div class="metric-label">Average Tip %</div>
+                <div class="metric-value" style="color: #F472B6;">{avg_tip:.1f}%</div>
+                <div class="metric-badge">✨ Tipped Ratio</div>
             </div>
             """,
             unsafe_allow_html=True,

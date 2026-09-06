@@ -34,7 +34,7 @@ def render_spatial_page(df: pd.DataFrame):
                 y="pickup_zone_name",
                 orientation="h",
                 color="trip_count",
-                color_continuous_scale="Viridis",
+                color_continuous_scale=["#0284C7", "#005BAE", "#38BDF8"],
                 labels={
                     "trip_count": "Total Pickups",
                     "pickup_zone_name": "Taxi Zone",
@@ -66,7 +66,7 @@ def render_spatial_page(df: pd.DataFrame):
                 y="pickup_zone_name",
                 orientation="h",
                 color="avg_fare",
-                color_continuous_scale="Cividis",
+                color_continuous_scale=["#059669", "#10B981", "#34D399"],
                 labels={
                     "total_revenue": "Total Revenue ($)",
                     "pickup_zone_name": "Taxi Zone",

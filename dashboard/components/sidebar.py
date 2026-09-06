@@ -1,35 +1,44 @@
-"""Sidebar Filter Controls Component."""
+"""Sidebar Filter Controls & Cache Management Component.
+
+Inspired by Greek-Tourism-Analytics-Project sidebar structure.
+"""
 
 import pandas as pd
 import streamlit as st
 from src.utils.config import settings
 
 
+def clear_dashboard_cache():
+    """Clear Streamlit data cache on user click."""
+    st.cache_data.clear()
+    st.toast("Cache cleared successfully!", icon="🧹")
+
+
 def render_sidebar_filters(
     trips_df: pd.DataFrame, zones_df: pd.DataFrame
 ) -> pd.DataFrame:
-    """Render interactive sidebar controls and apply filters to dataset.
-
-    Args:
-        trips_df: Raw or loaded fact trips DataFrame
-        zones_df: Taxi zone lookup DataFrame
-
-    Returns:
-        pd.DataFrame: Filtered DataFrame
-    """
-    st.sidebar.markdown("## ⚙️ Control Panel")
+    """Render sidebar control panel matching Greek Tourism project architecture."""
+    st.sidebar.markdown("### 🚕 NYC Taxi Analytics")
+    st.sidebar.caption("Enterprise End-to-End Data Pipeline")
     st.sidebar.markdown("---")
+
+    # 1. System Status Indicator
+    db_engine = settings.DB_ENGINE_TYPE.upper()
+    st.sidebar.info(
+        f"**Database**: Active (`{db_engine}`)\n\n" f"**Pipeline**: Airflow & PySpark"
+    )
+
+    # 2. System Actions (Cache Management)
+    if st.sidebar.button("🧹 Clear App Cache", use_container_width=True):
+        clear_dashboard_cache()
+
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🔍 Global Filters")
 
     if trips_df.empty:
         return trips_df
 
-    # 1. System Status Indicator
-    db_engine = settings.DB_ENGINE_TYPE.upper()
-    st.sidebar.markdown(f"**Database Status**: `Active ({db_engine})` 🟢")
-
-    st.sidebar.markdown("### 🔍 Global Filters")
-
-    # 2. Month Multi-Select Filter
+    # 3. Month Filter
     available_months = (
         sorted(trips_df["pickup_month"].unique())
         if "pickup_month" in trips_df.columns
@@ -53,11 +62,11 @@ def render_sidebar_filters(
     selected_months = st.sidebar.multiselect(
         "Select Months (2025)",
         options=available_months,
-        format_func=lambda x: f"{month_names.get(x, x)} (M{x})",
+        format_func=lambda x: f"{month_names.get(x, x)} (Month {x})",
         default=available_months,
     )
 
-    # 3. Pickup Zone Filter
+    # 4. Pickup Zone Filter
     if "pickup_zone_name" in trips_df.columns:
         zone_options = sorted(trips_df["pickup_zone_name"].dropna().unique())
         selected_zones = st.sidebar.multiselect(
@@ -66,16 +75,16 @@ def render_sidebar_filters(
     else:
         selected_zones = []
 
-    # 4. Payment Method Filter
+    # 5. Payment Method Filter
     payment_map = {1: "Credit Card", 2: "Cash", 3: "No Charge", 4: "Dispute"}
     selected_payments = st.sidebar.multiselect(
-        "Payment Types",
+        "Payment Methods",
         options=list(payment_map.keys()),
         format_func=lambda x: payment_map.get(x, f"Type {x}"),
         default=list(payment_map.keys()),
     )
 
-    # 5. Distance & Fare Range Sliders
+    # 6. Distance & Fare Range Sliders
     max_dist_val = (
         float(trips_df["trip_distance"].max())
         if "trip_distance" in trips_df.columns
@@ -102,7 +111,7 @@ def render_sidebar_filters(
         step=5.0,
     )
 
-    # Apply Filtering
+    # Apply Filtering Logic
     filtered_df = trips_df.copy()
 
     if selected_months and "pickup_month" in filtered_df.columns:
@@ -127,10 +136,9 @@ def render_sidebar_filters(
         ]
 
     st.sidebar.markdown("---")
-    st.sidebar.metric(
-        label="Active Filtered Volume",
-        value=f"{len(filtered_df):,} trips",
-        delta=f"{(len(filtered_df) / max(len(trips_df), 1)) * 100:.1f}% of total",
+    st.sidebar.caption(
+        f"📊 **Active Volume**: {len(filtered_df):,} trips "
+        f"({(len(filtered_df) / max(len(trips_df), 1)) * 100:.1f}% of total)"
     )
 
     return filtered_df

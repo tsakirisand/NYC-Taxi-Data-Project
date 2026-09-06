@@ -37,10 +37,10 @@ def render_economics_page(df: pd.DataFrame):
                 values="Count",
                 hole=0.45,
                 color_discrete_sequence=[
-                    "#06b6d4",
-                    "#f59e0b",
-                    "#ec4899",
-                    "#8b5cf6",
+                    "#005BAE",
+                    "#0284C7",
+                    "#38BDF8",
+                    "#F59E0B",
                 ],
                 title="Payment Method Breakdown",
             )
@@ -74,8 +74,8 @@ def render_economics_page(df: pd.DataFrame):
                 y="Count",
                 color="Category",
                 color_discrete_map={
-                    "Tipped Trips": "#10b981",
-                    "Non-Tipped Trips": "#64748b",
+                    "Tipped Trips": "#10B981",
+                    "Non-Tipped Trips": "#64748B",
                 },
                 text_auto=True,
                 title="Tipped vs Non-Tipped Volume",
@@ -98,7 +98,7 @@ def render_economics_page(df: pd.DataFrame):
                 y="avg_speed_mph",
                 markers=True,
                 line_shape="spline",
-                color_discrete_sequence=["#06b6d4"],
+                color_discrete_sequence=["#38BDF8"],
                 labels={
                     "pickup_hour": "Hour of Day (0-23)",
                     "avg_speed_mph": "Average Speed (mph)",
@@ -144,8 +144,8 @@ def render_economics_page(df: pd.DataFrame):
             y="avg_duration",
             color="Peak Category",
             color_discrete_map={
-                "Peak Rush Hour": "#ec4899",
-                "Off-Peak": "#f59e0b",
+                "Peak Rush Hour": "#005BAE",
+                "Off-Peak": "#64748B",
             },
             text_auto=".1f",
             labels={"avg_duration": "Avg Duration (Minutes)"},

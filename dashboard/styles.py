@@ -1,143 +1,149 @@
-"""CSS Design System & Theme Configuration for Streamlit Dashboard."""
+"""CSS Design System & Theme Configuration for Streamlit Dashboard.
+
+Inspired by Greek Tourism Analytics Project UI/UX architecture.
+Clean, corporate blue-slate design system with Inter typography and left-accent cards.
+"""
 
 import streamlit as st
 
 # Color Tokens
-COLOR_PRIMARY_AMBER = "#f59e0b"
-COLOR_CYAN = "#06b6d4"
-COLOR_PURPLE = "#8b5cf6"
-COLOR_ROSE = "#ec4899"
-COLOR_EMERALD = "#10b981"
-COLOR_BG_DARK = "#090d16"
-COLOR_CARD_BG = "rgba(18, 24, 38, 0.75)"
-COLOR_BORDER = "rgba(255, 255, 255, 0.08)"
+COLOR_PRIMARY_BLUE = "#005BAE"
+COLOR_ACCENT_SKY = "#38BDF8"
+COLOR_ACCENT_AMBER = "#F59E0B"
+COLOR_SUCCESS_EMERALD = "#10B981"
+COLOR_BG_DARK = "#0F172A"
+COLOR_CARD_BG = "#1E293B"
+COLOR_BORDER = "#334155"
 
 
 def inject_custom_css():
-    """Inject modern glassmorphism CSS theme and typography."""
+    """Inject clean corporate CSS theme with Inter typography and metric cards."""
     css_content = """
         <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        html, body, [class*="css"] {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
         /* App Background */
         .stApp {
-            background-color: #090d16;
-            color: #f1f5f9;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #0F172A;
+            color: #F8FAFC;
         }
 
         /* Sidebar Styling */
         [data-testid="stSidebar"] {
-            background-color: #0d1322;
-            border-right: 1px solid rgba(255, 255, 255, 0.06);
+            background-color: #1E293B;
+            border-right: 1px solid #334155;
         }
 
         /* Main Header Banner */
         .main-header {
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 100%);
-            border: 1px solid rgba(245, 158, 11, 0.2);
-            border-radius: 16px;
-            padding: 1.5rem 2rem;
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+            border: 1px solid #334155;
+            border-left: 6px solid #005BAE;
+            border-radius: 12px;
+            padding: 1.4rem 1.8rem;
             margin-bottom: 1.5rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
         }
 
         .main-header-title {
-            font-family: 'Outfit', sans-serif;
-            font-size: 2.2rem;
+            font-size: 2.0rem;
             font-weight: 800;
-            background: linear-gradient(90deg, #f59e0b 0%, #ec4899 50%, #8b5cf6 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: #F8FAFC;
             margin: 0;
             letter-spacing: -0.02em;
         }
 
         .main-header-subtitle {
-            font-size: 0.95rem;
-            color: #94a3b8;
-            margin-top: 0.4rem;
+            font-size: 0.9rem;
+            color: #94A3B8;
+            margin-top: 0.3rem;
             margin-bottom: 0;
+            font-weight: 500;
         }
 
         /* Metric Cards Grid */
-        .kpi-card {
-            background: rgba(18, 24, 38, 0.75);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 14px;
+        .metric-card {
+            background: #1E293B;
+            border: 1px solid #334155;
+            border-left: 5px solid #005BAE;
+            border-radius: 10px;
             padding: 1rem 1.2rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-            transition: all 0.25s ease-in-out;
-            min-height: 100px;
+            box-shadow: 0 4px 12px rgba(0, 91, 174, 0.08);
+            transition: all 0.2s ease-in-out;
+            min-height: 105px;
             display: flex;
             flex-direction: column;
             justify-content: center;
         }
 
-        .kpi-card:hover {
+        .metric-card:hover {
             transform: translateY(-3px);
-            border-color: rgba(245, 158, 11, 0.35);
-            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.15);
+            border-color: #0284C7;
+            border-left-color: #38BDF8;
+            box-shadow: 0 8px 20px rgba(2, 132, 199, 0.2);
+            background: #243147;
         }
 
-        .kpi-title {
+        .metric-label {
             font-size: 0.75rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: #94a3b8;
-            margin-bottom: 0.3rem;
+            letter-spacing: 0.06em;
+            color: #94A3B8;
+            margin-bottom: 0.25rem;
         }
 
-        .kpi-value {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #ffffff;
+        .metric-value {
+            font-size: 1.65rem;
+            font-weight: 800;
+            color: #38BDF8;
+            line-height: 1.2;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        .kpi-badge {
+        .metric-badge {
             display: inline-block;
-            font-size: 0.7rem;
+            font-size: 0.72rem;
             font-weight: 600;
-            padding: 0.15rem 0.4rem;
-            border-radius: 6px;
-            margin-top: 0.4rem;
-            width: fit-content;
+            color: #CBD5E1;
+            margin-top: 0.35rem;
         }
 
-        .badge-amber { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
-        .badge-cyan { background: rgba(6, 182, 212, 0.15); color: #06b6d4; }
-        .badge-purple { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
-        .badge-rose { background: rgba(236, 72, 153, 0.15); color: #ec4899; }
-        .badge-emerald { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        /* Streamlit Button Customization */
+        .stButton>button {
+            border-radius: 8px;
+            font-weight: 600;
+            border: 1px solid #334155;
+            transition: all 0.2s ease;
+        }
 
         /* Tabs customization */
         .stTabs [data-baseweb="tab-list"] {
-            gap: 12px;
-            background-color: transparent;
-            padding-bottom: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            gap: 8px;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 6px;
         }
 
         .stTabs [data-baseweb="tab"] {
-            height: 44px;
-            background-color: rgba(18, 24, 38, 0.6);
-            border-radius: 10px;
-            color: #94a3b8;
+            background-color: #1E293B;
+            border-radius: 8px;
+            color: #94A3B8;
             font-weight: 600;
-            font-size: 0.9rem;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 0 20px;
+            font-size: 0.88rem;
+            border: 1px solid #334155;
+            padding: 0 16px;
         }
 
         .stTabs [aria-selected="true"] {
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(236, 72, 153, 0.2) 100%) !important;
-            color: #ffffff !important;
-            border: 1px solid rgba(245, 158, 11, 0.5) !important;
+            background-color: #005BAE !important;
+            color: #FFFFFF !important;
+            border-color: #38BDF8 !important;
         }
         </style>
     """
@@ -145,18 +151,18 @@ def inject_custom_css():
 
 
 def get_plotly_layout_defaults():
-    """Return Plotly layout settings for consistent dark aesthetic."""
+    """Return Plotly layout settings for consistent clean slate aesthetic."""
     return dict(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Inter, sans-serif", color="#94a3b8", size=12),
+        font=dict(family="Inter, sans-serif", color="#94A3B8", size=12),
         margin=dict(l=20, r=20, t=40, b=20),
         xaxis=dict(
-            gridcolor="rgba(255, 255, 255, 0.05)",
-            zerolinecolor="rgba(255, 255, 255, 0.1)",
+            gridcolor="#334155",
+            zerolinecolor="#475569",
         ),
         yaxis=dict(
-            gridcolor="rgba(255, 255, 255, 0.05)",
-            zerolinecolor="rgba(255, 255, 255, 0.1)",
+            gridcolor="#334155",
+            zerolinecolor="#475569",
         ),
     )

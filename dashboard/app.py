@@ -157,10 +157,10 @@ def load_dashboard_data():
 
 
 def main():
-    # Page Navigation Selector in Sidebar
-    st.sidebar.markdown("## 📌 Navigation Menu")
+    # Page Navigation Selector in Sidebar matching Greek Tourism UI
+    st.sidebar.markdown("### 📌 Navigation")
     selected_page = st.sidebar.radio(
-        "Select Dashboard Page",
+        "Select Page",
         options=[
             "📊 Executive Overview",
             "📍 Spatial & Zone Analytics",
