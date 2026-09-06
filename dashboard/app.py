@@ -204,8 +204,7 @@ def load_dashboard_data():
             trips_df["rush_hour_status"] = (
                 trips_df["is_peak_hour"].map(peak_map).fillna("Off-Peak")
             )
-    else:
-        totals_dict["unfiltered_len"] = len(trips_df)
+    totals_dict["unfiltered_len"] = len(trips_df)
     return trips_df, zones_df, totals_dict
 
 
