@@ -167,8 +167,8 @@ def main():
     parser.add_argument(
         "--months",
         type=str,
-        default="1",
-        help="Comma-separated months to download, e.g. '1,2,3' or 'all' (default: '1')",
+        default="1,2,3,4,5,6,7,8,9,10,11,12",
+        help="Comma-separated months to download, e.g. '1,2,3' or 'all' (default: all 12 months)",
     )
     parser.add_argument(
         "--force",
@@ -178,7 +178,7 @@ def main():
 
     args = parser.parse_args()
 
-    if args.months.lower() == "all":
+    if args.months.lower() in ("all", "12"):
         months = list(range(1, 13))
     else:
         months = [int(m.strip()) for m in args.months.split(",") if m.strip()]

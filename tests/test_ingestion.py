@@ -51,3 +51,40 @@ def test_download_month_404_not_found(mock_get, temp_test_dir):
 
     res = downloader.download_month(2025, 12, force=True)
     assert res is None
+
+
+def test_download_year_defaults_to_all_12_months(temp_test_dir):
+    """Test that download_year downloads all 12 months by default."""
+    storage = StorageManager(storage_type="local")
+    downloader = TaxiDataDownloader(storage=storage)
+
+    with patch.object(downloader, "download_month") as mock_dl_month, patch.object(
+        downloader, "download_taxi_zone_lookup"
+    ) as mock_dl_zone:
+        mock_dl_month.side_effect = (
+            lambda year, month, force=False: temp_test_dir
+            / f"yellow_tripdata_{year}-{month:02d}.parquet"
+        )
+
+        results = downloader.download_year(year=2025)
+        assert len(results) == 12
+        assert mock_dl_month.call_count == 12
+        mock_dl_zone.assert_called_once()
+
+
+def test_download_year_custom_months(temp_test_dir):
+    """Test downloading specific months (e.g. 1, 2, 3)."""
+    storage = StorageManager(storage_type="local")
+    downloader = TaxiDataDownloader(storage=storage)
+
+    with patch.object(downloader, "download_month") as mock_dl_month, patch.object(
+        downloader, "download_taxi_zone_lookup"
+    ):
+        mock_dl_month.side_effect = (
+            lambda year, month, force=False: temp_test_dir
+            / f"yellow_tripdata_{year}-{month:02d}.parquet"
+        )
+
+        results = downloader.download_year(year=2025, months=[1, 2, 3])
+        assert len(results) == 3
+        assert mock_dl_month.call_count == 3

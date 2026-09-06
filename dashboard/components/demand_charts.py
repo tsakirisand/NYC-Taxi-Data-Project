@@ -78,3 +78,60 @@ def render_demand_page(df: pd.DataFrame):
             )
             fig_dow.update_layout(**get_plotly_layout_defaults(), height=420)
             st.plotly_chart(fig_dow, use_container_width=True)
+
+    # 3. Monthly Demand & Revenue Trend Profile across 2025 (Full Year Overview)
+    if "pickup_month" in df.columns:
+        month_map = {
+            1: "Jan",
+            2: "Feb",
+            3: "Mar",
+            4: "Apr",
+            5: "May",
+            6: "Jun",
+            7: "Jul",
+            8: "Aug",
+            9: "Sep",
+            10: "Oct",
+            11: "Nov",
+            12: "Dec",
+        }
+        monthly_df = (
+            df.groupby("pickup_month")
+            .agg(
+                trips=("fare_amount", "count"),
+                revenue=("total_amount", "sum"),
+                avg_fare=("fare_amount", "mean"),
+            )
+            .reset_index()
+        )
+        monthly_df["month_name"] = monthly_df["pickup_month"].map(month_map)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("### 🗓️ 2025 Monthly Demand & Revenue Trend Profile")
+
+        m1, m2 = st.columns(2)
+        with m1:
+            fig_m_trips = px.bar(
+                monthly_df,
+                x="month_name",
+                y="trips",
+                color="trips",
+                color_continuous_scale=["#005BAE", "#0284C7", "#38BDF8"],
+                labels={"month_name": "Month (2025)", "trips": "Total Trips"},
+                title="Monthly Trip Volume (2025)",
+            )
+            fig_m_trips.update_layout(**get_plotly_layout_defaults(), height=360)
+            st.plotly_chart(fig_m_trips, use_container_width=True)
+
+        with m2:
+            fig_m_rev = px.line(
+                monthly_df,
+                x="month_name",
+                y="revenue",
+                markers=True,
+                color_discrete_sequence=["#10B981"],
+                labels={"month_name": "Month (2025)", "revenue": "Total Revenue ($)"},
+                title="Monthly Gross Revenue Trend ($)",
+            )
+            fig_m_rev.update_layout(**get_plotly_layout_defaults(), height=360)
+            st.plotly_chart(fig_m_rev, use_container_width=True)

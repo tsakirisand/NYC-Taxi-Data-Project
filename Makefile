@@ -9,7 +9,7 @@ setup:
 	$(PIP) install -r requirements.txt
 
 download:
-	$(PYTHON) -m src.ingestion.download_taxi_data --year 2025 --months 1
+	$(PYTHON) -m src.ingestion.download_taxi_data --year 2025
 
 validate:
 	$(PYTHON) -m src.validation.validate_data

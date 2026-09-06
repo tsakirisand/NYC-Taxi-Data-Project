@@ -279,6 +279,25 @@ class DatabaseLoader:
         self.load_dim_date()
         self.load_fact_trips()
         self.load_aggregate_tables()
+
+        # Run verification query across loaded months
+        try:
+            with self.engine.connect() as conn:
+                res = conn.execute(
+                    text(
+                        "SELECT pickup_year, pickup_month, COUNT(*) AS trips "
+                        "FROM fact_trips GROUP BY 1, 2 ORDER BY 1, 2"
+                    )
+                )
+                rows = res.fetchall()
+                logger.info(
+                    f"--- Multi-Month Database Verification ({len(rows)} months loaded) ---"
+                )
+                for r in rows:
+                    logger.info(f"  Year {r[0]} Month {r[1]:02d}: {r[2]:,} trips")
+        except Exception as e:
+            logger.warning(f"Verification query notice: {e}")
+
         logger.info("Database loading pipeline completed successfully.")
 
 

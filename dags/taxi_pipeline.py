@@ -42,8 +42,8 @@ def task_download_data(**kwargs):
     logger.info("Airflow Task 1: Starting data ingestion...")
 
     downloader = TaxiDataDownloader()
-    # Download 2025 Month 1 by default, or configured months
-    downloaded = downloader.download_year(year=2025, months=[1])
+    # Download 2025 all 12 months by default
+    downloaded = downloader.download_year(year=2025)
     logger.info(f"Airflow Task 1 Finished. Downloaded {len(downloaded)} files.")
     return [str(p) for p in downloaded]
 

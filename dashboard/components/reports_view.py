@@ -64,7 +64,11 @@ def render_reports_page(df: pd.DataFrame):
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Action Controls: Download Report .md, Export Summary CSV, or Export JSON
-    report_path = Path(__file__).resolve().parent.parent.parent / "reports" / "executive_data_report.md"
+    report_path = (
+        Path(__file__).resolve().parent.parent.parent
+        / "reports"
+        / "executive_data_report.md"
+    )
 
     col_dl1, col_dl2, col_dl3 = st.columns(3)
 

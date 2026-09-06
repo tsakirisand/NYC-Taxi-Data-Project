@@ -58,7 +58,11 @@ def load_dashboard_data():
             """,
             con=engine,
         )
-        if kpi_df.empty or kpi_df.iloc[0]["total_trips"] is None or kpi_df.iloc[0]["total_trips"] == 0:
+        if (
+            kpi_df.empty
+            or kpi_df.iloc[0]["total_trips"] is None
+            or kpi_df.iloc[0]["total_trips"] == 0
+        ):
             raise ValueError("Database table fact_trips is empty or not populated.")
 
         totals_dict = kpi_df.iloc[0].to_dict()
@@ -91,13 +95,15 @@ def load_dashboard_data():
     except Exception:
         # Fallback to local Parquet files if DB not populated
         fact_path = settings.PROCESSED_DATA_DIR / "fact_trips.parquet"
-        val_path = settings.VALIDATED_DATA_DIR / "yellow_tripdata_2025-01.parquet"
+        val_files = sorted(settings.VALIDATED_DATA_DIR.glob("*.parquet"))
         zone_path = settings.REFERENCE_DATA_DIR / "taxi_zone_lookup.csv"
 
         if fact_path.exists():
             trips_df = pd.read_parquet(fact_path)
-        elif val_path.exists():
-            trips_df = pd.read_parquet(val_path)
+        elif val_files:
+            trips_df = pd.concat(
+                [pd.read_parquet(f) for f in val_files], ignore_index=True
+            )
         else:
             trips_df = pd.DataFrame()
 
@@ -112,7 +118,9 @@ def load_dashboard_data():
             else "PULocationID" if "PULocationID" in trips_df.columns else None
         )
         if not trips_df.empty and pu_col and not zones_df.empty:
-            zone_id_col = "LocationID" if "LocationID" in zones_df.columns else "location_id"
+            zone_id_col = (
+                "LocationID" if "LocationID" in zones_df.columns else "location_id"
+            )
             zone_name_col = "Zone" if "Zone" in zones_df.columns else "pickup_zone_name"
             zone_dict = dict(zip(zones_df[zone_id_col], zones_df[zone_name_col]))
             trips_df["pickup_zone_name"] = trips_df[pu_col].map(zone_dict)
