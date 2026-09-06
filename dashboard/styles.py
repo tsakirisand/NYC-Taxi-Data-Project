@@ -159,6 +159,63 @@ def inject_custom_css():
         .stTabs [data-baseweb="tab-border"] {
             display: none;
         }
+
+        /* Sidebar Radio Navigation Pill Menu (Matching User Photo Style) */
+        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] {
+            gap: 6px !important;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label {
+            background-color: transparent !important;
+            padding: 10px 16px !important;
+            border-radius: 10px !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease-in-out !important;
+            display: flex !important;
+            align-items: center !important;
+            width: 100% !important;
+            margin-bottom: 2px !important;
+            border: none !important;
+        }
+
+        /* Hide radio circle dot icon completely */
+        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label > div:first-child,
+        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label svg,
+        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label input {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+        }
+
+        /* Radio label text */
+        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label p {
+            font-size: 1.05rem !important;
+            font-weight: 600 !important;
+            color: #94A3B8 !important;
+            margin: 0 !important;
+        }
+
+        /* Hover state for inactive items */
+        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:hover {
+            background-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:hover p {
+            color: #F8FAFC !important;
+        }
+
+        /* Active Selected Pill matching user photo */
+        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked),
+        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label[aria-checked="true"] {
+            background-color: #DBEAFE !important;
+            border-radius: 10px !important;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p,
+        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label[aria-checked="true"] p {
+            color: #0F172A !important;
+            font-weight: 800 !important;
+        }
         </style>
     """
     st.markdown(css_content, unsafe_allow_html=True)
