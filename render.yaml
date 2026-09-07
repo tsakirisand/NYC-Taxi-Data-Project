@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: nyc-yellow-taxi-analytics
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: streamlit run dashboard/app.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DB_ENGINE_TYPE
+        value: sqlite
+      - key: DEFAULT_YEAR
+        value: "2025"
+      - key: LOG_LEVEL
+        value: INFO
