@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -25,7 +25,7 @@ class Settings(BaseSettings):
         "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv"
     )
     DEFAULT_YEAR: int = 2025
-    DEFAULT_MONTHS: List[int] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    DEFAULT_MONTHS: Union[List[int], str] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
     @field_validator("DEFAULT_MONTHS", mode="before")
     @classmethod
