@@ -15,7 +15,9 @@ from dashboard.data_service import (
 
 
 def render_reports_page(
-    df: Optional[pd.DataFrame] = None, filter_spec: Optional[Dict[str, Any]] = None
+    df: Optional[pd.DataFrame] = None,
+    filter_spec: Optional[Dict[str, Any]] = None,
+    **kwargs,
 ):
     """Render interactive Executive Analytics Report with dynamic 100% full-dataset calculations."""
     filter_key = make_filter_key(filter_spec)

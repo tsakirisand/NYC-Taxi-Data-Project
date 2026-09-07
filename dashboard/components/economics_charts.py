@@ -16,7 +16,9 @@ from dashboard.styles import get_plotly_layout_defaults
 
 
 def render_economics_page(
-    df: Optional[pd.DataFrame] = None, filter_spec: Optional[Dict[str, Any]] = None
+    df: Optional[pd.DataFrame] = None,
+    filter_spec: Optional[Dict[str, Any]] = None,
+    **kwargs,
 ):
     """Render Page 3: Economics, Speed Velocity Profile & SQL Workbench with 100% full-dataset aggregations."""
     filter_key = make_filter_key(filter_spec)

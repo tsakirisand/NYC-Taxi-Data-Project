@@ -14,7 +14,9 @@ from dashboard.styles import get_plotly_layout_defaults
 
 
 def render_demand_page(
-    df: Optional[pd.DataFrame] = None, filter_spec: Optional[Dict[str, Any]] = None
+    df: Optional[pd.DataFrame] = None,
+    filter_spec: Optional[Dict[str, Any]] = None,
+    **kwargs,
 ):
     """Render Page 1: Executive Overview & Demand Trends with 100% full-dataset SQL aggregations."""
     filter_key = make_filter_key(filter_spec)

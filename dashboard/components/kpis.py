@@ -31,6 +31,7 @@ def render_kpi_cards(
     totals_dict: Optional[Dict[str, float]] = None,
     sample_ratio: float = 1.0,
     filter_spec: Optional[Dict[str, Any]] = None,
+    **kwargs,
 ):
     """Render 8 clean metric cards across a 4x2 grid with 100% exact full dataset aggregations."""
     filter_key = make_filter_key(filter_spec)
