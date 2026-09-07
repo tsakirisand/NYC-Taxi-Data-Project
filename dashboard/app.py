@@ -7,13 +7,13 @@ Modular Multi-Page Streamlit Dashboard with 4 focused pages:
 4. Executive Report & Insights
 """
 
+import importlib  # noqa: E402
 import sys
 from pathlib import Path
 
 # Ensure root package path resolution
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import importlib  # noqa: E402
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
@@ -54,9 +54,33 @@ st.set_page_config(
 inject_custom_css()
 
 
+def ensure_cloud_dataset_bootstrapped():
+    """Auto-download zone lookup and Month 1 parquet if validated directory is empty."""
+    val_files = list(settings.VALIDATED_DATA_DIR.glob("*.parquet"))
+    zone_path = settings.REFERENCE_DATA_DIR / "taxi_zone_lookup.csv"
+
+    if not zone_path.exists() or not val_files:
+        try:
+            from src.ingestion.download_taxi_data import TaxiDataDownloader
+            from src.validation.validate_data import DataValidator
+
+            downloader = TaxiDataDownloader()
+            if not zone_path.exists():
+                downloader.download_taxi_zone_lookup()
+
+            if not val_files:
+                raw_file = downloader.download_month(year=2025, month=1)
+                if raw_file and raw_file.exists():
+                    val_file = settings.VALIDATED_DATA_DIR / raw_file.name
+                    DataValidator().validate_file(raw_file, val_file)
+        except Exception as e:
+            print(f"Cloud bootstrap note: {e}")
+
+
 @st.cache_data(ttl=600)
 def load_dashboard_data():
     """Load optimized multi-month fact trips sample for tabular explorer and zone lookup."""
+    ensure_cloud_dataset_bootstrapped()
     val_files = sorted(settings.VALIDATED_DATA_DIR.glob("*.parquet"))
     zone_path = settings.REFERENCE_DATA_DIR / "taxi_zone_lookup.csv"
 
@@ -179,11 +203,19 @@ def main():
 
     if trips_df.empty:
         st.warning(
-            "⚠️ No dataset found or database cache refreshing. Please click below to reload."
+            "⚠️ No dataset found or database cache refreshing. Please click below to reload or download cloud dataset."
         )
-        if st.button("🔄 Reload Dashboard Data"):
-            st.cache_data.clear()
-            st.rerun()
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔄 Reload Dashboard Data", use_container_width=True):
+                st.cache_data.clear()
+                st.rerun()
+        with col2:
+            if st.button("📥 Sync 2025 Dataset on Cloud", use_container_width=True):
+                with st.spinner("Downloading and validating 2025 dataset..."):
+                    ensure_cloud_dataset_bootstrapped()
+                    st.cache_data.clear()
+                    st.rerun()
         st.stop()
 
     # 2. Render Sidebar Filters & Return Filtered Dataset + Filter Spec
