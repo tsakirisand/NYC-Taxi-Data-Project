@@ -25,22 +25,21 @@ class Settings(BaseSettings):
         "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv"
     )
     DEFAULT_YEAR: int = 2025
-    DEFAULT_MONTHS: Union[List[int], str] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
-    @field_validator("DEFAULT_MONTHS", mode="before")
-    @classmethod
-    def parse_default_months(cls, v: Any) -> List[int]:
-        """Parse DEFAULT_MONTHS safely from comma-separated string, JSON array, or list."""
-        if isinstance(v, str):
-            v_str = v.strip()
-            if v_str.startswith("[") and v_str.endswith("]"):
-                try:
-                    return [int(x) for x in json.loads(v_str)]
-                except Exception:
-                    pass
-            return [int(m.strip()) for m in v_str.split(",") if m.strip()]
-        elif isinstance(v, (list, tuple)):
-            return [int(x) for x in v]
+    @property
+    def DEFAULT_MONTHS(self) -> List[int]:
+        """Return list of default months [1..12] or parsed from DEFAULT_MONTHS env var if provided."""
+        import os
+
+        env_val = os.getenv("DEFAULT_MONTHS")
+        if env_val:
+            try:
+                env_str = env_val.strip()
+                if env_str.startswith("[") and env_str.endswith("]"):
+                    return [int(x) for x in json.loads(env_str)]
+                return [int(m.strip()) for m in env_str.split(",") if m.strip()]
+            except Exception:
+                pass
         return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
     # Database Configuration
