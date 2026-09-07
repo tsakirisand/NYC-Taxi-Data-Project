@@ -13,18 +13,34 @@ from pathlib import Path
 # Ensure root package path resolution
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import importlib  # noqa: E402
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
-from dashboard.components.demand_charts import render_demand_page  # noqa: E402
-from dashboard.components.economics_charts import render_economics_page  # noqa: E402
-from dashboard.components.kpis import render_kpi_cards  # noqa: E402
-from dashboard.components.reports_view import render_reports_page  # noqa: E402
-from dashboard.components.sidebar import render_sidebar_filters  # noqa: E402
-from dashboard.components.spatial_charts import render_spatial_page  # noqa: E402
+import dashboard.components.demand_charts as demand_mod  # noqa: E402
+import dashboard.components.economics_charts as economics_mod  # noqa: E402
+import dashboard.components.kpis as kpis_mod  # noqa: E402
+import dashboard.components.reports_view as reports_mod  # noqa: E402
+import dashboard.components.sidebar as sidebar_mod  # noqa: E402
+import dashboard.components.spatial_charts as spatial_mod  # noqa: E402
 from dashboard.styles import inject_custom_css  # noqa: E402
 from src.database.load_postgres import DatabaseLoader  # noqa: E402
 from src.utils.config import settings  # noqa: E402
+
+# Ensure fresh module reloading during Streamlit hot-reloads
+importlib.reload(kpis_mod)
+importlib.reload(sidebar_mod)
+importlib.reload(demand_mod)
+importlib.reload(spatial_mod)
+importlib.reload(economics_mod)
+importlib.reload(reports_mod)
+
+render_kpi_cards = kpis_mod.render_kpi_cards
+render_sidebar_filters = sidebar_mod.render_sidebar_filters
+render_demand_page = demand_mod.render_demand_page
+render_spatial_page = spatial_mod.render_spatial_page
+render_economics_page = economics_mod.render_economics_page
+render_reports_page = reports_mod.render_reports_page
 
 # 1. Page Configuration
 st.set_page_config(
