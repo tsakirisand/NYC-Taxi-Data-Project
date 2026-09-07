@@ -1,9 +1,10 @@
 """NYC Yellow Taxi Data Engineering - Interactive Analytics Portal.
 
-Modular Multi-Page Streamlit Dashboard with 3 focused pages:
+Modular Multi-Page Streamlit Dashboard with 4 focused pages:
 1. Executive Overview & Demand Trends
 2. Spatial & Taxi Zone Performance
 3. Trip Economics, Speed Velocity & SQL Workbench
+4. Executive Report & Insights
 """
 
 import sys
@@ -39,7 +40,7 @@ inject_custom_css()
 
 @st.cache_data(ttl=600)
 def load_dashboard_data():
-    """Load optimized multi-month fact trips sample and exact annual totals for fast rendering."""
+    """Load optimized multi-month fact trips sample for tabular explorer and zone lookup."""
     val_files = sorted(settings.VALIDATED_DATA_DIR.glob("*.parquet"))
     zone_path = settings.REFERENCE_DATA_DIR / "taxi_zone_lookup.csv"
 
@@ -57,24 +58,7 @@ def load_dashboard_data():
         import duckdb
 
         con = duckdb.connect()
-        # 1. Exact Dataset Totals across all 12 months (44+ million records)
-        kpi_df = con.query("""
-            SELECT
-                count(*) as total_trips,
-                sum(total_amount) as total_revenue,
-                avg(fare_amount) as avg_fare,
-                avg(trip_distance) as avg_distance,
-                avg(epoch(tpep_dropoff_datetime - tpep_pickup_datetime)/60.0) as avg_duration,
-                avg(CASE WHEN fare_amount > 0 THEN (tip_amount / fare_amount) * 100.0 ELSE 0.0 END) as avg_tip
-            FROM 'data/validated/*.parquet'
-            """).df()
-
-        if kpi_df.empty or kpi_df.iloc[0]["total_trips"] == 0:
-            raise ValueError("No records found in validated files.")
-
-        totals_dict = kpi_df.iloc[0].to_dict()
-
-        # 2. Representative Multi-Month Stratified Sample for Interactive Charts (25k rows/month)
+        # Representative Multi-Month Stratified Sample for Interactive Data Previews (25k rows/month)
         trips_df = con.query("""
             WITH sampled AS (
                 SELECT *,
@@ -93,7 +77,7 @@ def load_dashboard_data():
                 FROM 'data/validated/*.parquet'
             )
             SELECT 
-                fare_amount, total_amount, trip_distance,
+                fare_amount, total_amount, trip_distance, tip_amount,
                 PULocationID as pulocation_id, payment_type,
                 trip_duration_minutes, avg_speed_mph, tip_percentage,
                 pickup_month, pickup_hour, pickup_day_of_week, is_peak_hour
@@ -109,27 +93,10 @@ def load_dashboard_data():
         engine = loader.engine
 
         try:
-            kpi_df = pd.read_sql(
-                """
-                SELECT
-                    COUNT(*) as total_trips,
-                    SUM(total_amount) as total_revenue,
-                    AVG(fare_amount) as avg_fare,
-                    AVG(trip_distance) as avg_distance,
-                    AVG(trip_duration_minutes) as avg_duration,
-                    AVG(tip_percentage) as avg_tip
-                FROM fact_trips
-                """,
-                con=engine,
-            )
-            if kpi_df.empty or kpi_df.iloc[0]["total_trips"] in (None, 0):
-                raise ValueError("Database table fact_trips is empty.")
-            totals_dict = kpi_df.iloc[0].to_dict()
-
             trips_df = pd.read_sql(
                 """
                 SELECT
-                    fare_amount, total_amount, trip_distance,
+                    fare_amount, total_amount, trip_distance, tip_amount,
                     pulocation_id, payment_type,
                     trip_duration_minutes, avg_speed_mph, tip_percentage,
                     CAST(strftime('%m', tpep_pickup_datetime) AS INTEGER) as pickup_month,
@@ -159,35 +126,6 @@ def load_dashboard_data():
             if not trips_df.empty and pu_col and not zones_df.empty:
                 trips_df["pickup_zone_name"] = trips_df[pu_col].map(zone_dict)
 
-            totals_dict = {
-                "total_trips": len(trips_df),
-                "total_revenue": (
-                    trips_df["total_amount"].sum()
-                    if "total_amount" in trips_df.columns
-                    else 0.0
-                ),
-                "avg_fare": (
-                    trips_df["fare_amount"].mean()
-                    if "fare_amount" in trips_df.columns
-                    else 0.0
-                ),
-                "avg_distance": (
-                    trips_df["trip_distance"].mean()
-                    if "trip_distance" in trips_df.columns
-                    else 0.0
-                ),
-                "avg_duration": (
-                    trips_df["trip_duration_minutes"].mean()
-                    if "trip_duration_minutes" in trips_df.columns
-                    else 0.0
-                ),
-                "avg_tip": (
-                    trips_df["tip_percentage"].mean()
-                    if "tip_percentage" in trips_df.columns
-                    else 0.0
-                ),
-            }
-
     # Clean human-readable transformations
     if not trips_df.empty:
         peak_map = {
@@ -204,12 +142,11 @@ def load_dashboard_data():
             trips_df["rush_hour_status"] = (
                 trips_df["is_peak_hour"].map(peak_map).fillna("Off-Peak")
             )
-    totals_dict["unfiltered_len"] = len(trips_df)
-    return trips_df, zones_df, totals_dict
+    return trips_df, zones_df
 
 
 def main():
-    # 1. Sidebar Navigation Menu Styled as Pill Tabs matching user screenshot
+    # 1. Sidebar Navigation Menu Styled as Pill Tabs
     selected_page = st.sidebar.radio(
         "Select Page",
         options=[
@@ -222,7 +159,7 @@ def main():
     )
     st.sidebar.markdown("---")
 
-    trips_df, zones_df, totals_dict = load_dashboard_data()
+    trips_df, zones_df = load_dashboard_data()
 
     if trips_df.empty:
         st.warning(
@@ -233,12 +170,8 @@ def main():
             st.rerun()
         st.stop()
 
-    # Calculate sample ratio for full dataset metrics scaling
-    total_real = totals_dict.get("total_trips", len(trips_df))
-    sample_ratio = total_real / len(trips_df) if len(trips_df) > 0 else 1.0
-
-    # 2. Render Sidebar Filters & Return Filtered Dataset
-    filtered_df = render_sidebar_filters(trips_df, zones_df)
+    # 2. Render Sidebar Filters & Return Filtered Dataset + Filter Spec
+    filtered_df, filter_spec = render_sidebar_filters(trips_df, zones_df)
 
     # 3. Main Content Views based on Selected Sidebar Navigation Pill Tab
     if "Executive Overview" in selected_page:
@@ -253,13 +186,11 @@ def main():
             """,
             unsafe_allow_html=True,
         )
-        # 3x2 KPI Cards
-        render_kpi_cards(
-            filtered_df, totals_dict=totals_dict, sample_ratio=sample_ratio
-        )
+        # 4x2 KPI Cards (100% full dataset exact SQL aggregations)
+        render_kpi_cards(filtered_df, filter_spec=filter_spec)
         st.markdown("<br>", unsafe_allow_html=True)
-        # Visual Charts on Main Page (Hourly Demand & Weekly Volume Profile)
-        render_demand_page(filtered_df)
+        # Visual Demand Trends & Volume Profiles
+        render_demand_page(filtered_df, filter_spec=filter_spec)
 
     elif "Spatial" in selected_page:
         st.markdown(
@@ -273,7 +204,7 @@ def main():
             """,
             unsafe_allow_html=True,
         )
-        render_spatial_page(filtered_df)
+        render_spatial_page(filtered_df, filter_spec=filter_spec)
 
     elif "Economics" in selected_page:
         st.markdown(
@@ -287,7 +218,7 @@ def main():
             """,
             unsafe_allow_html=True,
         )
-        render_economics_page(filtered_df)
+        render_economics_page(filtered_df, filter_spec=filter_spec)
 
     elif "Report" in selected_page:
         st.markdown(
@@ -301,7 +232,7 @@ def main():
             """,
             unsafe_allow_html=True,
         )
-        render_reports_page(filtered_df)
+        render_reports_page(filtered_df, filter_spec=filter_spec)
 
 
 if __name__ == "__main__":

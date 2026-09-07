@@ -1,33 +1,29 @@
 """Spatial & Taxi Zone Analytics Component (Page 2)."""
 
+from typing import Dict, Any, Optional
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+from dashboard.data_service import make_filter_key, query_top_zones
 from dashboard.styles import get_plotly_layout_defaults
 
 
-def render_spatial_page(df: pd.DataFrame):
-    """Render Page 2: Spatial & Taxi Zone Performance (Max 2 clean charts)."""
-    if df.empty:
-        st.info("No spatial data available.")
-        return
+def render_spatial_page(
+    df: Optional[pd.DataFrame] = None, filter_spec: Optional[Dict[str, Any]] = None
+):
+    """Render Page 2: Spatial & Taxi Zone Performance with 100% full-dataset aggregations."""
+    filter_key = make_filter_key(filter_spec)
 
     st.markdown("## 📍 Spatial & Taxi Zone Analytics")
     st.markdown("---")
 
     c1, c2 = st.columns(2)
 
+    top_zones = query_top_zones(filter_key, filter_spec, limit=10)
+
     with c1:
         st.markdown("### 📍 Top Busiest Pickup Taxi Zones")
-        if "pickup_zone_name" in df.columns:
-            top_zones = (
-                df.groupby("pickup_zone_name")
-                .size()
-                .reset_index(name="trip_count")
-                .sort_values("trip_count", ascending=False)
-                .head(10)
-            )
-
+        if not top_zones.empty:
             fig_zones = px.bar(
                 top_zones,
                 x="trip_count",
@@ -47,18 +43,10 @@ def render_spatial_page(df: pd.DataFrame):
 
     with c2:
         st.markdown("### 🚖 Most Profitable Taxi Zones")
-        if "pickup_zone_name" in df.columns and "total_amount" in df.columns:
-            revenue_zones = (
-                df.groupby("pickup_zone_name")
-                .agg(
-                    total_revenue=("total_amount", "sum"),
-                    avg_fare=("fare_amount", "mean"),
-                    trips=("fare_amount", "count"),
-                )
-                .reset_index()
-                .sort_values("total_revenue", ascending=False)
-                .head(10)
-            )
+        if not top_zones.empty:
+            revenue_zones = top_zones.sort_values(
+                "total_revenue", ascending=False
+            ).head(10)
 
             fig_rev = px.bar(
                 revenue_zones,

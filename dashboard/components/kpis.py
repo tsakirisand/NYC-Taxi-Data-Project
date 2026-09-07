@@ -1,13 +1,16 @@
 """KPI Metric Cards Component matching Greek Tourism Analytics UI standard."""
 
-from typing import Dict, Optional
+from typing import Dict, Any, Optional
 import pandas as pd
 import streamlit as st
+from dashboard.data_service import query_kpis, make_filter_key
 
 
 def format_currency(val: float) -> str:
     """Format large currency values cleanly."""
-    if val >= 1_000_000:
+    if val >= 1_000_000_000:
+        return f"${val / 1_000_000_000:.2f}B"
+    elif val >= 1_000_000:
         return f"${val / 1_000_000:.2f}M"
     elif val >= 1_000:
         return f"${val / 1_000:.1f}K"
@@ -24,80 +27,26 @@ def format_count(val: float) -> str:
 
 
 def render_kpi_cards(
-    df: pd.DataFrame,
+    df: Optional[pd.DataFrame] = None,
     totals_dict: Optional[Dict[str, float]] = None,
     sample_ratio: float = 1.0,
+    filter_spec: Optional[Dict[str, Any]] = None,
 ):
-    """Render 6 clean metric cards across a 3x2 grid matching Greek Tourism UI style."""
-    if df.empty:
-        return
+    """Render 8 clean metric cards across a 4x2 grid with 100% exact full dataset aggregations."""
+    filter_key = make_filter_key(filter_spec)
+    kpis = query_kpis(filter_key, filter_spec)
 
-    # Determine if any filter has been applied (len(df) < unfiltered_len)
-    unfiltered_len = totals_dict.get("unfiltered_len") if totals_dict else None
-    is_filtered = (unfiltered_len is not None) and (len(df) < unfiltered_len)
+    total_trips = int(kpis["total_trips"])
+    total_revenue = float(kpis["total_revenue"])
+    total_tips = float(kpis["total_tips"])
+    avg_fare = float(kpis["avg_fare"])
+    avg_distance = float(kpis["avg_distance"])
+    avg_duration = float(kpis["avg_duration"])
+    avg_speed = float(kpis["avg_speed"])
+    avg_tip = float(kpis["avg_tip_pct"])
 
-    if totals_dict and not is_filtered:
-        total_trips = int(totals_dict["total_trips"])
-        total_revenue = float(totals_dict["total_revenue"])
-        avg_fare = float(
-            totals_dict.get(
-                "avg_fare",
-                df["fare_amount"].mean() if "fare_amount" in df.columns else 0.0,
-            )
-        )
-        avg_distance = float(
-            totals_dict.get(
-                "avg_distance",
-                df["trip_distance"].mean() if "trip_distance" in df.columns else 0.0,
-            )
-        )
-        avg_duration = float(
-            totals_dict.get(
-                "avg_duration",
-                (
-                    df["trip_duration_minutes"].mean()
-                    if "trip_duration_minutes" in df.columns
-                    else 0.0
-                ),
-            )
-        )
-        avg_tip = float(
-            totals_dict.get(
-                "avg_tip",
-                df["tip_percentage"].mean() if "tip_percentage" in df.columns else 0.0,
-            )
-        )
-    else:
-        scale = max(sample_ratio, 1.0)
-        total_trips = int(len(df) * scale)
-        total_revenue = (
-            float(df["total_amount"].sum() * scale)
-            if "total_amount" in df.columns and not df.empty
-            else 0.0
-        )
-        avg_fare = (
-            float(df["fare_amount"].mean())
-            if "fare_amount" in df.columns and not df.empty
-            else 0.0
-        )
-        avg_distance = (
-            float(df["trip_distance"].mean())
-            if "trip_distance" in df.columns and not df.empty
-            else 0.0
-        )
-        avg_duration = (
-            float(df["trip_duration_minutes"].mean())
-            if "trip_duration_minutes" in df.columns and not df.empty
-            else 0.0
-        )
-        avg_tip = (
-            float(df["tip_percentage"].mean())
-            if "tip_percentage" in df.columns and not df.empty
-            else 0.0
-        )
-
-    # Row 1: Total Trips, Total Revenue, Avg Fare
-    r1_col1, r1_col2, r1_col3 = st.columns(3)
+    # Row 1: Total Trips, Total Revenue, Total Tips, Average Fare
+    r1_col1, r1_col2, r1_col3, r1_col4 = st.columns(4)
 
     with r1_col1:
         st.markdown(
@@ -126,10 +75,22 @@ def render_kpi_cards(
     with r1_col3:
         st.markdown(
             f"""
+            <div class="metric-card" style="border-left-color: #059669;">
+                <div class="metric-label">Total Tips</div>
+                <div class="metric-value" style="color: #10B981;">{format_currency(total_tips)}</div>
+                <div class="metric-badge">💵 Tips: ${total_tips:,.2f}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with r1_col4:
+        st.markdown(
+            f"""
             <div class="metric-card" style="border-left-color: #10B981;">
                 <div class="metric-label">Average Fare</div>
-                <div class="metric-value" style="color: #10B981;">${avg_fare:.2f}</div>
-                <div class="metric-badge">💵 Per Trip Average</div>
+                <div class="metric-value" style="color: #34D399;">${avg_fare:.2f}</div>
+                <div class="metric-badge">💳 Per Trip Fare</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -137,8 +98,8 @@ def render_kpi_cards(
 
     st.markdown("<div style='margin-bottom: 0.8rem;'></div>", unsafe_allow_html=True)
 
-    # Row 2: Avg Distance, Avg Duration, Avg Tip %
-    r2_col1, r2_col2, r2_col3 = st.columns(3)
+    # Row 2: Avg Distance, Avg Duration, Avg Speed, Avg Tip %
+    r2_col1, r2_col2, r2_col3, r2_col4 = st.columns(4)
 
     with r2_col1:
         st.markdown(
@@ -167,10 +128,22 @@ def render_kpi_cards(
     with r2_col3:
         st.markdown(
             f"""
+            <div class="metric-card" style="border-left-color: #38BDF8;">
+                <div class="metric-label">Average Speed</div>
+                <div class="metric-value" style="color: #38BDF8;">{avg_speed:.1f} mph</div>
+                <div class="metric-badge">⚡ City Velocity</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with r2_col4:
+        st.markdown(
+            f"""
             <div class="metric-card" style="border-left-color: #EC4899;">
                 <div class="metric-label">Average Tip %</div>
                 <div class="metric-value" style="color: #F472B6;">{avg_tip:.1f}%</div>
-                <div class="metric-badge">✨ Tipped Ratio</div>
+                <div class="metric-badge">✨ Tip Ratio</div>
             </div>
             """,
             unsafe_allow_html=True,
