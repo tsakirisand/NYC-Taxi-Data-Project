@@ -25,6 +25,7 @@ from dashboard.components import (
     sidebar as sidebar_mod,
     spatial_charts as spatial_mod,
 )
+from dashboard.data_service import get_parquet_path  # noqa: E402
 from dashboard.styles import inject_custom_css  # noqa: E402
 from src.database.load_postgres import DatabaseLoader  # noqa: E402
 from src.utils.config import settings  # noqa: E402
@@ -57,24 +58,14 @@ inject_custom_css()
 
 
 def ensure_cloud_dataset_bootstrapped():
-    """Auto-download zone lookup and Month 1 parquet if validated directory is empty."""
-    val_files = list(settings.VALIDATED_DATA_DIR.glob("*.parquet"))
+    """Ensure zone lookup reference table is available."""
     zone_path = settings.REFERENCE_DATA_DIR / "taxi_zone_lookup.csv"
-
-    if not zone_path.exists() or not val_files:
+    if not zone_path.exists():
         try:
             from src.ingestion.download_taxi_data import TaxiDataDownloader
-            from src.validation.validate_data import DataValidator
 
             downloader = TaxiDataDownloader()
-            if not zone_path.exists():
-                downloader.download_taxi_zone_lookup()
-
-            if not val_files:
-                raw_file = downloader.download_month(year=2025, month=1)
-                if raw_file and raw_file.exists():
-                    val_file = settings.VALIDATED_DATA_DIR / raw_file.name
-                    DataValidator().validate_file(raw_file, val_file)
+            downloader.download_taxi_zone_lookup()
         except Exception as e:
             print(f"Cloud bootstrap note: {e}")
 
@@ -100,8 +91,9 @@ def load_dashboard_data():
         import duckdb
 
         con = duckdb.connect()
-        # Representative Multi-Month Stratified Sample for Interactive Data Previews (25k rows/month)
-        trips_df = con.query("""
+        p_path = get_parquet_path()
+        # Representative Multi-Month Stratified Sample for Interactive Data Previews
+        trips_df = con.query(f"""
             WITH sampled AS (
                 SELECT *,
                     month(tpep_pickup_datetime) as pickup_month,
@@ -116,7 +108,7 @@ def load_dashboard_data():
                          AND (hour(tpep_pickup_datetime) BETWEEN 7 AND 9 OR hour(tpep_pickup_datetime) BETWEEN 16 AND 19)
                          THEN true ELSE false END as is_peak_hour,
                     row_number() OVER (PARTITION BY month(tpep_pickup_datetime)) as rn
-                FROM 'data/validated/*.parquet'
+                FROM '{p_path}'
             )
             SELECT 
                 fare_amount, total_amount, trip_distance, tip_amount,

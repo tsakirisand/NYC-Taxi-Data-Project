@@ -13,6 +13,7 @@ data/raw/
 data/validated/
 data/processed/
 *.parquet
+!data/sample/*.parquet
 *.db
 *.sqlite
 *.log

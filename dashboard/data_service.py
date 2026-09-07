@@ -72,6 +72,18 @@ def build_where_clause(filter_spec: Optional[Dict[str, Any]]) -> str:
     return ""
 
 
+def get_parquet_path() -> str:
+    """Return 'data/validated/*.parquet' if validated files exist, else fallback to 'data/sample/*.parquet'."""
+    val_files = list(settings.VALIDATED_DATA_DIR.glob("*.parquet"))
+    if val_files:
+        return "data/validated/*.parquet"
+    sample_dir = settings.BASE_DIR / "data" / "sample"
+    sample_files = list(sample_dir.glob("*.parquet"))
+    if sample_files:
+        return "data/sample/*.parquet"
+    return "data/validated/*.parquet"
+
+
 def _get_duckdb_con():
     import duckdb
 
@@ -100,6 +112,7 @@ def query_kpis(
 ) -> Dict[str, float]:
     """Return exact full-dataset KPIs based on active filters."""
     where = build_where_clause(filter_spec)
+    p_path = get_parquet_path()
     con = _get_duckdb_con()
     sql = f"""
         SELECT
@@ -113,7 +126,7 @@ def query_kpis(
                              THEN trip_distance / (epoch(tpep_dropoff_datetime - tpep_pickup_datetime)/3600.0)
                              ELSE 0.0 END), 0.0) as avg_speed,
             COALESCE(AVG(CASE WHEN fare_amount > 0 THEN (tip_amount / fare_amount) * 100.0 ELSE 0.0 END), 0.0) as avg_tip_pct
-        FROM 'data/validated/*.parquet'
+        FROM '{p_path}'
         {where}
     """
     df = con.query(sql).df()
@@ -137,6 +150,7 @@ def query_monthly_demand(
 ) -> pd.DataFrame:
     """Return exact monthly trip volume and gross revenue aggregation."""
     where = build_where_clause(filter_spec)
+    p_path = get_parquet_path()
     con = _get_duckdb_con()
     sql = f"""
         SELECT
@@ -144,7 +158,7 @@ def query_monthly_demand(
             COUNT(*) as trips,
             COALESCE(SUM(total_amount), 0.0) as revenue,
             COALESCE(AVG(fare_amount), 0.0) as avg_fare
-        FROM 'data/validated/*.parquet'
+        FROM '{p_path}'
         {where}
         GROUP BY pickup_month
         ORDER BY pickup_month
@@ -174,6 +188,7 @@ def query_hourly_demand(
 ) -> pd.DataFrame:
     """Return exact 24-hour demand profile aggregation."""
     where = build_where_clause(filter_spec)
+    p_path = get_parquet_path()
     con = _get_duckdb_con()
     sql = f"""
         SELECT
@@ -181,7 +196,7 @@ def query_hourly_demand(
             COUNT(*) as trips,
             COALESCE(SUM(total_amount), 0.0) as revenue,
             COALESCE(AVG(fare_amount), 0.0) as avg_fare
-        FROM 'data/validated/*.parquet'
+        FROM '{p_path}'
         {where}
         GROUP BY pickup_hour
         ORDER BY pickup_hour
@@ -195,6 +210,7 @@ def query_dow_demand(
 ) -> pd.DataFrame:
     """Return exact Day of Week volume profile aggregation."""
     where = build_where_clause(filter_spec)
+    p_path = get_parquet_path()
     con = _get_duckdb_con()
     sql = f"""
         SELECT
@@ -202,7 +218,7 @@ def query_dow_demand(
             COUNT(*) as trips,
             COALESCE(SUM(total_amount), 0.0) as revenue,
             COALESCE(AVG(fare_amount), 0.0) as avg_fare
-        FROM 'data/validated/*.parquet'
+        FROM '{p_path}'
         {where}
         GROUP BY pickup_day_of_week
     """
@@ -220,6 +236,7 @@ def query_payment_breakdown(
 ) -> pd.DataFrame:
     """Return exact Payment Type breakdown and tipping statistics."""
     where = build_where_clause(filter_spec)
+    p_path = get_parquet_path()
     con = _get_duckdb_con()
     sql = f"""
         SELECT
@@ -227,7 +244,7 @@ def query_payment_breakdown(
             COUNT(*) as trips,
             COALESCE(SUM(total_amount), 0.0) as revenue,
             COALESCE(AVG(CASE WHEN fare_amount > 0 THEN (tip_amount / fare_amount) * 100.0 ELSE 0.0 END), 0.0) as avg_tip_pct
-        FROM 'data/validated/*.parquet'
+        FROM '{p_path}'
         {where}
         GROUP BY payment_type
         ORDER BY payment_type
@@ -251,6 +268,7 @@ def query_top_zones(
 ) -> pd.DataFrame:
     """Return exact Top Busiest and Grossing Taxi Pickup Zones."""
     where = build_where_clause(filter_spec)
+    p_path = get_parquet_path()
     con = _get_duckdb_con()
     sql = f"""
         SELECT
@@ -258,7 +276,7 @@ def query_top_zones(
             COUNT(*) as trip_count,
             COALESCE(SUM(total_amount), 0.0) as total_revenue,
             COALESCE(AVG(fare_amount), 0.0) as avg_fare
-        FROM 'data/validated/*.parquet'
+        FROM '{p_path}'
         {where}
         GROUP BY PULocationID
         ORDER BY trip_count DESC
@@ -282,13 +300,14 @@ def query_airport_metrics(
     else:
         airport_where = "WHERE PULocationID IN (132, 138)"
 
+    p_path = get_parquet_path()
     con = _get_duckdb_con()
     sql = f"""
         SELECT
             PULocationID,
             COUNT(*) as trips,
             COALESCE(SUM(total_amount), 0.0) as revenue
-        FROM 'data/validated/*.parquet'
+        FROM '{p_path}'
         {airport_where}
         GROUP BY PULocationID
     """
@@ -330,13 +349,14 @@ def query_peak_hour_info(
 ) -> Dict[str, Any]:
     """Return exact dynamically computed peak demand hour."""
     where = build_where_clause(filter_spec)
+    p_path = get_parquet_path()
     con = _get_duckdb_con()
     sql = f"""
         SELECT
             hour(tpep_pickup_datetime) as pickup_hour,
             COUNT(*) as trips,
             COALESCE(SUM(total_amount), 0.0) as revenue
-        FROM 'data/validated/*.parquet'
+        FROM '{p_path}'
         {where}
         GROUP BY pickup_hour
         ORDER BY trips DESC
@@ -371,6 +391,7 @@ def query_speed_by_hour(
 ) -> pd.DataFrame:
     """Return average speed in mph across 24 hours."""
     where = build_where_clause(filter_spec)
+    p_path = get_parquet_path()
     con = _get_duckdb_con()
     sql = f"""
         SELECT
@@ -378,7 +399,7 @@ def query_speed_by_hour(
             COALESCE(AVG(CASE WHEN epoch(tpep_dropoff_datetime - tpep_pickup_datetime) > 0
                              THEN trip_distance / (epoch(tpep_dropoff_datetime - tpep_pickup_datetime)/3600.0)
                              ELSE 0.0 END), 0.0) as avg_speed_mph
-        FROM 'data/validated/*.parquet'
+        FROM '{p_path}'
         {where}
         GROUP BY pickup_hour
         ORDER BY pickup_hour
@@ -392,13 +413,14 @@ def query_tipping_summary(
 ) -> pd.DataFrame:
     """Return volume breakdown of tipped vs non-tipped trips."""
     where = build_where_clause(filter_spec)
+    p_path = get_parquet_path()
     con = _get_duckdb_con()
     sql = f"""
         SELECT
             CASE WHEN tip_amount > 0 THEN 'Tipped Trips' ELSE 'Non-Tipped Trips' END as Category,
             COUNT(*) as Count,
             COALESCE(SUM(total_amount), 0.0) as Revenue
-        FROM 'data/validated/*.parquet'
+        FROM '{p_path}'
         {where}
         GROUP BY Category
     """
@@ -411,6 +433,7 @@ def query_rush_hour_summary(
 ) -> pd.DataFrame:
     """Return average duration and speed for Peak Rush Hour vs Off-Peak."""
     where = build_where_clause(filter_spec)
+    p_path = get_parquet_path()
     con = _get_duckdb_con()
     sql = f"""
         SELECT
@@ -421,7 +444,7 @@ def query_rush_hour_summary(
             COALESCE(AVG(CASE WHEN epoch(tpep_dropoff_datetime - tpep_pickup_datetime) > 0
                              THEN trip_distance / (epoch(tpep_dropoff_datetime - tpep_pickup_datetime)/3600.0)
                              ELSE 0.0 END), 0.0) as avg_speed
-        FROM 'data/validated/*.parquet'
+        FROM '{p_path}'
         {where}
         GROUP BY peak_category
     """
