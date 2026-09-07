@@ -49,6 +49,12 @@ def get_parquet_info() -> Tuple[str, bool]:
     return "data/validated/*.parquet", False
 
 
+def get_parquet_path() -> str:
+    """Return parquet path string for app.py."""
+    path, _ = get_parquet_info()
+    return path
+
+
 def build_where_clause(filter_spec: Optional[Dict[str, Any]], is_agg: bool = False) -> str:
     """Build SQL WHERE clause from filter specification dict."""
     if not filter_spec:
