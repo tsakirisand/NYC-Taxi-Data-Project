@@ -1,7 +1,9 @@
 """Configuration management using Pydantic Settings."""
 
+import json
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,6 +26,22 @@ class Settings(BaseSettings):
     )
     DEFAULT_YEAR: int = 2025
     DEFAULT_MONTHS: List[int] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+    @field_validator("DEFAULT_MONTHS", mode="before")
+    @classmethod
+    def parse_default_months(cls, v: Any) -> List[int]:
+        """Parse DEFAULT_MONTHS safely from comma-separated string, JSON array, or list."""
+        if isinstance(v, str):
+            v_str = v.strip()
+            if v_str.startswith("[") and v_str.endswith("]"):
+                try:
+                    return [int(x) for x in json.loads(v_str)]
+                except Exception:
+                    pass
+            return [int(m.strip()) for m in v_str.split(",") if m.strip()]
+        elif isinstance(v, (list, tuple)):
+            return [int(x) for x in v]
+        return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
     # Database Configuration
     POSTGRES_HOST: str = "localhost"
