@@ -17,12 +17,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
-import dashboard.components.demand_charts as demand_mod  # noqa: E402
-import dashboard.components.economics_charts as economics_mod  # noqa: E402
-import dashboard.components.kpis as kpis_mod  # noqa: E402
-import dashboard.components.reports_view as reports_mod  # noqa: E402
-import dashboard.components.sidebar as sidebar_mod  # noqa: E402
-import dashboard.components.spatial_charts as spatial_mod  # noqa: E402
+from dashboard.components import (
+    demand_charts as demand_mod,
+    economics_charts as economics_mod,
+    kpis as kpis_mod,
+    reports_view as reports_mod,
+    sidebar as sidebar_mod,
+    spatial_charts as spatial_mod,
+)
 from dashboard.styles import inject_custom_css  # noqa: E402
 from src.database.load_postgres import DatabaseLoader  # noqa: E402
 from src.utils.config import settings  # noqa: E402
