@@ -6,6 +6,11 @@ Designed as a portfolio project demonstrating large-scale distributed data compu
 
 ---
 
+## 🌐 Live Demo & Deployment
+🔗 **Public Application URL:** [https://nyc-taxi-data-project.onrender.com](https://nyc-taxi-data-project.onrender.com)
+
+---
+
 ## 📊 Key Executive Findings & Urban Analytics (January 2025 Dataset)
 
 | Metric / Insight | Empirical Value | Key Takeaway & Urban Insight |
