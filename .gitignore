@@ -11,9 +11,9 @@ ENV/
 # Data Files (Do not commit large Parquet / DB files)
 data/raw/
 data/validated/
-data/processed/
 *.parquet
 !data/sample/*.parquet
+!data/processed/fact_trips_aggregated.parquet
 *.db
 *.sqlite
 *.log
