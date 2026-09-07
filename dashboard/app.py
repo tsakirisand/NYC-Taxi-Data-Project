@@ -171,7 +171,13 @@ def main():
         st.stop()
 
     # 2. Render Sidebar Filters & Return Filtered Dataset + Filter Spec
-    filtered_df, filter_spec = render_sidebar_filters(trips_df, zones_df)
+    sidebar_res = render_sidebar_filters(trips_df, zones_df)
+    if isinstance(sidebar_res, tuple) and len(sidebar_res) == 2:
+        filtered_df, filter_spec = sidebar_res
+    elif isinstance(sidebar_res, tuple) and len(sidebar_res) >= 1:
+        filtered_df, filter_spec = sidebar_res[0], {}
+    else:
+        filtered_df, filter_spec = sidebar_res, {}
 
     # 3. Main Content Views based on Selected Sidebar Navigation Pill Tab
     if "Executive Overview" in selected_page:
