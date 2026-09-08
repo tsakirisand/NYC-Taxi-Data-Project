@@ -160,7 +160,7 @@ def inject_custom_css():
             display: none;
         }
 
-        /* Sidebar Radio Navigation Pill Menu (Matching User Photo Style) */
+        /* Sidebar Radio Navigation Pill Menu (Matching User Reference Image) */
         [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] {
             gap: 6px !important;
         }
@@ -168,21 +168,29 @@ def inject_custom_css():
         [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label {
             background-color: transparent !important;
             padding: 10px 16px !important;
-            border-radius: 10px !important;
+            border-radius: 12px !important;
             cursor: pointer !important;
             transition: all 0.2s ease-in-out !important;
             display: flex !important;
             align-items: center !important;
             width: 100% !important;
-            margin-bottom: 2px !important;
+            margin-bottom: 4px !important;
             border: none !important;
         }
 
-        /* Hide radio circle input dot only */
-        [data-testid="stSidebar"] [data-testid="stRadio"] label input[type="radio"] {
+        /* Hide radio circle icon completely in sidebar navigation */
+        [data-testid="stSidebar"] [data-testid="stRadio"] label > div:first-child:not([data-testid="stMarkdownContainer"]) {
             display: none !important;
         }
-
+        [data-testid="stSidebar"] [data-testid="stRadio"] label [data-testid="stRadioButtonCustomIcon"] {
+            display: none !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stRadio"] label input {
+            display: none !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stRadio"] label svg {
+            display: none !important;
+        }
         [data-testid="stSidebar"] [data-testid="stRadio"] label div[aria-hidden="true"] {
             display: none !important;
         }
@@ -196,7 +204,7 @@ def inject_custom_css():
         }
 
         [data-testid="stSidebar"] [data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {
-            font-size: 1.0rem !important;
+            font-size: 0.98rem !important;
             font-weight: 600 !important;
             color: #94A3B8 !important;
             margin: 0 !important;
@@ -214,11 +222,11 @@ def inject_custom_css():
             color: #F8FAFC !important;
         }
 
-        /* Active Selected Pill matching user photo */
+        /* Active Selected Pill matching user reference image */
         [data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked),
         [data-testid="stSidebar"] [data-testid="stRadio"] label[aria-checked="true"] {
-            background-color: #DBEAFE !important;
-            border-radius: 10px !important;
+            background-color: #E2EBF8 !important;
+            border-radius: 12px !important;
         }
 
         [data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) p,
