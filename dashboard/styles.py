@@ -165,7 +165,7 @@ def inject_custom_css():
             gap: 6px !important;
         }
 
-        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label {
+        [data-testid="stSidebar"] [data-testid="stRadio"] label[data-testid="stRadioOption"] {
             background-color: transparent !important;
             padding: 10px 16px !important;
             border-radius: 12px !important;
@@ -178,32 +178,32 @@ def inject_custom_css():
             border: none !important;
         }
 
-        /* Hide radio circle icon completely in sidebar navigation */
-        [data-testid="stSidebar"] [data-testid="stRadio"] label > div:first-child:not([data-testid="stMarkdownContainer"]) {
+        /* 100% INFALLIBLE RADIO CIRCLE HIDING SELECTORS */
+        [data-testid="stSidebar"] [data-testid="stRadio"] label[data-testid="stRadioOption"] > div > div > div:first-child,
+        [data-testid="stSidebar"] [data-testid="stRadio"] label[data-testid="stRadioOption"] div:has(> [data-testid="stMarkdownContainer"]) > div:first-child:not([data-testid="stMarkdownContainer"]),
+        [data-testid="stSidebar"] [data-testid="stRadio"] label[data-testid="stRadioOption"] div[class*="eqiohyi4"],
+        [data-testid="stSidebar"] [data-testid="stRadio"] label[data-testid="stRadioOption"] div[class*="eqiohyi5"],
+        [data-testid="stSidebar"] [data-testid="stRadio"] label[data-testid="stRadioOption"] input,
+        [data-testid="stSidebar"] [data-testid="stRadio"] label[data-testid="stRadioOption"] svg,
+        [data-testid="stSidebar"] [data-testid="stRadio"] label[data-testid="stRadioOption"] span:first-child {
             display: none !important;
-        }
-        [data-testid="stSidebar"] [data-testid="stRadio"] label [data-testid="stRadioButtonCustomIcon"] {
-            display: none !important;
-        }
-        [data-testid="stSidebar"] [data-testid="stRadio"] label input {
-            display: none !important;
-        }
-        [data-testid="stSidebar"] [data-testid="stRadio"] label svg {
-            display: none !important;
-        }
-        [data-testid="stSidebar"] [data-testid="stRadio"] label div[aria-hidden="true"] {
-            display: none !important;
+            visibility: hidden !important;
+            width: 0 !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            opacity: 0 !important;
         }
 
         /* Force markdown text container inside label to be fully visible */
-        [data-testid="stSidebar"] [data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] {
+        [data-testid="stSidebar"] [data-testid="stRadio"] label[data-testid="stRadioOption"] div[data-testid="stMarkdownContainer"] {
             display: block !important;
             visibility: visible !important;
             opacity: 1 !important;
             width: 100% !important;
         }
 
-        [data-testid="stSidebar"] [data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {
+        [data-testid="stSidebar"] [data-testid="stRadio"] label[data-testid="stRadioOption"] div[data-testid="stMarkdownContainer"] p {
             font-size: 0.98rem !important;
             font-weight: 600 !important;
             color: #94A3B8 !important;
@@ -214,29 +214,32 @@ def inject_custom_css():
         }
 
         /* Hover state for inactive items */
-        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:hover {
+        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label[data-testid="stRadioOption"]:hover {
             background-color: rgba(255, 255, 255, 0.08) !important;
         }
 
-        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:hover p {
+        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label[data-testid="stRadioOption"]:hover p {
             color: #F8FAFC !important;
         }
 
         /* Active Selected Pill matching user reference image */
-        [data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked),
-        [data-testid="stSidebar"] [data-testid="stRadio"] label[aria-checked="true"] {
+        [data-testid="stSidebar"] [data-testid="stRadio"] label[data-testid="stRadioOption"]:has(input:checked),
+        [data-testid="stSidebar"] [data-testid="stRadio"] label[data-testid="stRadioOption"][data-selected="true"],
+        [data-testid="stSidebar"] [data-testid="stRadio"] label[data-testid="stRadioOption"][aria-checked="true"] {
             background-color: #E2EBF8 !important;
             border-radius: 12px !important;
         }
 
-        [data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) p,
-        [data-testid="stSidebar"] [data-testid="stRadio"] label[aria-checked="true"] p {
+        [data-testid="stSidebar"] [data-testid="stRadio"] label[data-testid="stRadioOption"]:has(input:checked) p,
+        [data-testid="stSidebar"] [data-testid="stRadio"] label[data-testid="stRadioOption"][data-selected="true"] p,
+        [data-testid="stSidebar"] [data-testid="stRadio"] label[data-testid="stRadioOption"][aria-checked="true"] p {
             color: #0F172A !important;
             font-weight: 800 !important;
         }
 
-        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p,
-        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label[aria-checked="true"] p {
+        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label[data-testid="stRadioOption"]:has(input:checked) p,
+        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label[data-testid="stRadioOption"][data-selected="true"] p,
+        [data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label[data-testid="stRadioOption"][aria-checked="true"] p {
             color: #0F172A !important;
             font-weight: 800 !important;
         }
