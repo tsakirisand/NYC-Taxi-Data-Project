@@ -11,6 +11,7 @@ from dashboard.data_service import (
     query_top_zones,
     query_payment_breakdown,
     query_airport_metrics,
+    query_monthly_demand,
 )
 
 
@@ -112,6 +113,30 @@ def render_reports_page(
             unsafe_allow_html=True,
         )
 
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # 12-Month Dynamic Performance Breakdown Table
+    st.markdown("### 📅 2025 Monthly Performance Summary (Every Month Breakdown)")
+    monthly_df = query_monthly_demand(filter_key, filter_spec)
+    if not monthly_df.empty:
+        disp_m = monthly_df.copy()
+        disp_m = disp_m.rename(
+            columns={
+                "pickup_month": "Month #",
+                "month_name": "Month",
+                "trips": "Total Trips",
+                "revenue": "Gross Revenue ($)",
+                "avg_fare": "Avg Fare ($)",
+            }
+        )
+        disp_m["Total Trips"] = disp_m["Total Trips"].map("{:,.0f}".format)
+        disp_m["Gross Revenue ($)"] = disp_m["Gross Revenue ($)"].map("${:,.2f}".format)
+        disp_m["Avg Fare ($)"] = disp_m["Avg Fare ($)"].map("${:,.2f}".format)
+        st.dataframe(
+            disp_m[["Month #", "Month", "Total Trips", "Gross Revenue ($)", "Avg Fare ($)"]],
+            use_container_width=True,
+            hide_index=True,
+        )
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Action Controls: Download Report .md, Export Summary CSV, or Export JSON
