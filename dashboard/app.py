@@ -70,7 +70,7 @@ def ensure_cloud_dataset_bootstrapped():
             print(f"Cloud bootstrap note: {e}")
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=3600, max_entries=5)
 def load_dashboard_data():
     """Load optimized multi-month fact trips sample for tabular explorer and zone lookup."""
     ensure_cloud_dataset_bootstrapped()
@@ -88,9 +88,8 @@ def load_dashboard_data():
         zone_dict = {}
 
     try:
-        import duckdb
-
-        con = duckdb.connect()
+        from dashboard.data_service import _get_duckdb_con
+        con = _get_duckdb_con()
         p_path, is_agg = get_parquet_info()
         if is_agg:
             trips_df = con.query(f"""
@@ -109,7 +108,7 @@ def load_dashboard_data():
                     pickup_day_of_week,
                     is_peak_hour
                 FROM '{p_path}'
-                LIMIT 50000
+                LIMIT 5000
             """).df()
         else:
             trips_df = con.query(f"""
@@ -135,7 +134,7 @@ def load_dashboard_data():
                     trip_duration_minutes, avg_speed_mph, tip_percentage,
                     pickup_month, pickup_hour, pickup_day_of_week, is_peak_hour
                 FROM sampled
-                WHERE rn <= 25000
+                WHERE rn <= 500
                 """).df()
 
         trips_df["pickup_zone_name"] = trips_df["pulocation_id"].map(zone_dict)

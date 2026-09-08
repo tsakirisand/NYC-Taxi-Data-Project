@@ -26,6 +26,7 @@ else:
     ZONE_NAME_TO_IDS = {}
 
 
+@st.cache_data(ttl=3600)
 def get_parquet_info() -> Tuple[str, bool]:
     """Return (parquet_file_path, is_aggregated_flag).
     
@@ -104,6 +105,7 @@ def build_where_clause(filter_spec: Optional[Dict[str, Any]], is_agg: bool = Fal
     return ""
 
 
+@st.cache_resource
 def _get_duckdb_con():
     import duckdb
 
@@ -126,7 +128,7 @@ def make_filter_key(filter_spec: Optional[Dict[str, Any]]) -> str:
     return "|".join(parts)
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=3600, max_entries=50)
 def query_kpis(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> Dict[str, float]:
@@ -180,7 +182,7 @@ def query_kpis(
     return df.iloc[0].to_dict()
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=3600, max_entries=50)
 def query_monthly_demand(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> pd.DataFrame:
@@ -231,7 +233,7 @@ def query_monthly_demand(
     return df
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=3600, max_entries=50)
 def query_hourly_demand(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> pd.DataFrame:
@@ -266,7 +268,7 @@ def query_hourly_demand(
     return con.query(sql).df()
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=3600, max_entries=50)
 def query_dow_demand(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> pd.DataFrame:
@@ -304,7 +306,7 @@ def query_dow_demand(
     return df.sort_values("pickup_day_of_week").reset_index(drop=True)
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=3600, max_entries=50)
 def query_payment_breakdown(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> pd.DataFrame:
@@ -349,7 +351,7 @@ def query_payment_breakdown(
     return df
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=3600, max_entries=50)
 def query_top_zones(
     filter_key: str, filter_spec: Optional[Dict[str, Any]], limit: int = 10
 ) -> pd.DataFrame:
@@ -390,7 +392,7 @@ def query_top_zones(
     return df
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=3600, max_entries=50)
 def query_airport_metrics(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> Dict[str, Any]:
@@ -457,7 +459,7 @@ def query_airport_metrics(
     }
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=3600, max_entries=50)
 def query_peak_hour_info(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> Dict[str, Any]:
@@ -512,7 +514,7 @@ def query_peak_hour_info(
     }
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=3600, max_entries=50)
 def query_speed_by_hour(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> pd.DataFrame:
@@ -545,7 +547,7 @@ def query_speed_by_hour(
     return con.query(sql).df()
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=3600, max_entries=50)
 def query_tipping_summary(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> pd.DataFrame:
@@ -580,7 +582,7 @@ def query_tipping_summary(
     return con.query(sql).df()
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=3600, max_entries=50)
 def query_rush_hour_summary(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> pd.DataFrame:

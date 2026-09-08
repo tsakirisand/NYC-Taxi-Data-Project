@@ -46,7 +46,7 @@ def render_demand_page(
                 title="Hourly Trip Demand Profile",
             )
             fig_hour.update_layout(**get_plotly_layout_defaults(), height=420)
-            st.plotly_chart(fig_hour, use_container_width=True)
+            st.plotly_chart(fig_hour, use_container_width=True, config={'displayModeBar': False, 'responsive': True})
 
     # 2. Day of Week Volume Profile
     with c2:
@@ -67,8 +67,8 @@ def render_demand_page(
                 title="Weekly Trip Volume Profile",
             )
             fig_dow.update_layout(**get_plotly_layout_defaults(), height=420)
-            st.plotly_chart(fig_dow, use_container_width=True)
-
+            st.plotly_chart(fig_dow, use_container_width=True, config={'displayModeBar': False, 'responsive': True})
+        
     # 3. Monthly Demand & Revenue Trend Profile across 2025 (Full Year Overview)
     monthly_df = query_monthly_demand(filter_key, filter_spec)
 
@@ -88,7 +88,7 @@ def render_demand_page(
                 title="Monthly Trip Volume (2025)",
             )
             fig_m_trips.update_layout(**get_plotly_layout_defaults(), height=360)
-            st.plotly_chart(fig_m_trips, use_container_width=True)
+            st.plotly_chart(fig_m_trips, use_container_width=True, config={'displayModeBar': False, 'responsive': True})
 
         with m2:
             fig_m_rev = px.line(
@@ -101,4 +101,4 @@ def render_demand_page(
                 title="Monthly Gross Revenue Trend ($)",
             )
             fig_m_rev.update_layout(**get_plotly_layout_defaults(), height=360)
-            st.plotly_chart(fig_m_rev, use_container_width=True)
+            st.plotly_chart(fig_m_rev, use_container_width=True, config={'displayModeBar': False, 'responsive': True})

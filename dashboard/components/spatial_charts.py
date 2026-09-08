@@ -41,7 +41,7 @@ def render_spatial_page(
             )
             fig_zones.update_layout(**get_plotly_layout_defaults(), height=420)
             fig_zones.update_yaxes(autorange="reversed")
-            st.plotly_chart(fig_zones, use_container_width=True)
+            st.plotly_chart(fig_zones, use_container_width=True, config={'displayModeBar': False, 'responsive': True})
 
     with c2:
         st.markdown("### 🚖 Most Profitable Taxi Zones")
@@ -66,4 +66,4 @@ def render_spatial_page(
             )
             fig_rev.update_layout(**get_plotly_layout_defaults(), height=420)
             fig_rev.update_yaxes(autorange="reversed")
-            st.plotly_chart(fig_rev, use_container_width=True)
+            st.plotly_chart(fig_rev, use_container_width=True, config={'displayModeBar': False, 'responsive': True})

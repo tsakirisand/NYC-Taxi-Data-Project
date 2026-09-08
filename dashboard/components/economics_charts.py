@@ -58,7 +58,7 @@ def render_economics_page(
                     yanchor="middle",
                 ),
             )
-            st.plotly_chart(fig_pay, use_container_width=True)
+            st.plotly_chart(fig_pay, use_container_width=True, config={'displayModeBar': False, 'responsive': True})
 
     with c2:
         tip_summary = query_tipping_summary(filter_key, filter_spec)
@@ -76,7 +76,7 @@ def render_economics_page(
                 title="Tipped vs Non-Tipped Volume",
             )
             fig_tip.update_layout(**get_plotly_layout_defaults(), height=380)
-            st.plotly_chart(fig_tip, use_container_width=True)
+            st.plotly_chart(fig_tip, use_container_width=True, config={'displayModeBar': False, 'responsive': True})
 
     st.markdown("---")
 
@@ -101,7 +101,7 @@ def render_economics_page(
                 title="City Velocity Profile Across 24 Hours",
             )
             fig_speed.update_layout(**get_plotly_layout_defaults(), height=380)
-            st.plotly_chart(fig_speed, use_container_width=True)
+            st.plotly_chart(fig_speed, use_container_width=True, config={'displayModeBar': False, 'responsive': True})
 
     with c4:
         peak_summary = query_rush_hour_summary(filter_key, filter_spec)
@@ -123,7 +123,7 @@ def render_economics_page(
                 title="Trip Duration: Peak vs Off-Peak",
             )
             fig_peak.update_layout(**get_plotly_layout_defaults(), height=380)
-            st.plotly_chart(fig_peak, use_container_width=True)
+            st.plotly_chart(fig_peak, use_container_width=True, config={'displayModeBar': False, 'responsive': True})
 
     st.markdown("---")
 

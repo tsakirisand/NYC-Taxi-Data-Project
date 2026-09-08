@@ -88,28 +88,40 @@ def render_sidebar_filters(
     }
 
     # Apply Filtering Logic to sample dataframe for tabular previews
-    filtered_df = trips_df.copy()
+    has_filters = (
+        (len(selected_months) < 12)
+        or len(selected_zones) > 0
+        or (len(selected_payments) < 5)
+        or distance_range[0] > 0.0
+        or distance_range[1] < 100.0
+        or fare_range[0] > 0.0
+        or fare_range[1] < 300.0
+    )
 
-    if selected_months and "pickup_month" in filtered_df.columns:
-        filtered_df = filtered_df[filtered_df["pickup_month"].isin(selected_months)]
+    if not has_filters:
+        filtered_df = trips_df
+    else:
+        filtered_df = trips_df
+        if selected_months and "pickup_month" in filtered_df.columns and len(selected_months) < 12:
+            filtered_df = filtered_df[filtered_df["pickup_month"].isin(selected_months)]
 
-    if selected_zones and "pickup_zone_name" in filtered_df.columns:
-        filtered_df = filtered_df[filtered_df["pickup_zone_name"].isin(selected_zones)]
+        if selected_zones and "pickup_zone_name" in filtered_df.columns:
+            filtered_df = filtered_df[filtered_df["pickup_zone_name"].isin(selected_zones)]
 
-    if selected_payments and "payment_type" in filtered_df.columns:
-        filtered_df = filtered_df[filtered_df["payment_type"].isin(selected_payments)]
+        if selected_payments and "payment_type" in filtered_df.columns and len(selected_payments) < 5:
+            filtered_df = filtered_df[filtered_df["payment_type"].isin(selected_payments)]
 
-    if "trip_distance" in filtered_df.columns:
-        filtered_df = filtered_df[
-            (filtered_df["trip_distance"] >= distance_range[0])
-            & (filtered_df["trip_distance"] <= distance_range[1])
-        ]
+        if "trip_distance" in filtered_df.columns and (distance_range[0] > 0 or distance_range[1] < 100):
+            filtered_df = filtered_df[
+                (filtered_df["trip_distance"] >= distance_range[0])
+                & (filtered_df["trip_distance"] <= distance_range[1])
+            ]
 
-    if "fare_amount" in filtered_df.columns:
-        filtered_df = filtered_df[
-            (filtered_df["fare_amount"] >= fare_range[0])
-            & (filtered_df["fare_amount"] <= fare_range[1])
-        ]
+        if "fare_amount" in filtered_df.columns and (fare_range[0] > 0 or fare_range[1] < 300):
+            filtered_df = filtered_df[
+                (filtered_df["fare_amount"] >= fare_range[0])
+                & (filtered_df["fare_amount"] <= fare_range[1])
+            ]
 
     st.sidebar.markdown("---")
     st.sidebar.caption(
