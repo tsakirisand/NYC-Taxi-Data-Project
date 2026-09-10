@@ -468,16 +468,6 @@ Verified empirical findings from the full-year 2025 dataset (**44,182,460 valida
 
 ---
 
-## 🔮 Future Improvements
-
-1. **AWS S3 Cloud Data Lake Storage:** Expand `src/utils/storage.py` to support streaming read/write directly to AWS S3 buckets using `s3fs` and AWS Glue Catalog.
-2. **dbt Data Warehouse Transformations:** Integrate `dbt-postgres` to modularize SQL analytics, automate testing, and auto-generate data lineage diagrams.
-3. **Great Expectations Quality Pipeline:** Upgrade `src/validation/validate_data.py` to use Great Expectations for automated schema drift detection and data profiling docs.
-4. **Streaming Ingestion Architecture:** Implement Apache Kafka and Spark Structured Streaming to process real-time taxi trip streams for live congestion pricing analytics.
-5. **ML Fare & Predictive Demand Modeling:** Train XGBoost and Prophet models to forecast hourly zone demand and estimate trip durations during extreme weather events.
-6. **Kubernetes Airflow Deployment:** Migrate Airflow orchestration from Docker Compose SequentialExecutor to KubernetesExecutor on AWS EKS for dynamic scaling of worker pods.
-
----
 
 ## 👨‍💻 Author
 
