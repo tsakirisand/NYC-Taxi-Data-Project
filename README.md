@@ -7,7 +7,7 @@ Processes large-scale urban mobility data through a multi-stage ETL architecture
 ---
 
 ## 🚀 Live Demo
-🔗 **Public Application URL:** [https://nyc-taxi-data-project.onrender.com](https://nyc-taxi-data-project.onrender.com)
+🔗 **Public Application URL:** [https://nyc-taxi-data-project.streamlit.app](https://nyc-taxi-data-project.streamlit.app)
 
 ---
 
