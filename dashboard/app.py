@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
-from dashboard.components import (
+from dashboard.components import (  # noqa: E402
     demand_charts as demand_mod,
     economics_charts as economics_mod,
     kpis as kpis_mod,
@@ -25,7 +25,7 @@ from dashboard.components import (
     sidebar as sidebar_mod,
     spatial_charts as spatial_mod,
 )
-from dashboard.data_service import get_parquet_info, get_parquet_path  # noqa: E402
+from dashboard.data_service import get_parquet_info  # noqa: E402
 from dashboard.styles import inject_custom_css  # noqa: E402
 from src.database.load_postgres import DatabaseLoader  # noqa: E402
 from src.utils.config import settings  # noqa: E402
@@ -89,11 +89,12 @@ def load_dashboard_data():
 
     try:
         from dashboard.data_service import _get_duckdb_con
+
         con = _get_duckdb_con()
         p_path, is_agg = get_parquet_info()
         if is_agg:
             trips_df = con.query(f"""
-                SELECT 
+                SELECT
                     (sum_fare_amount / trip_count) as fare_amount,
                     (sum_total_amount / trip_count) as total_amount,
                     (sum_trip_distance / trip_count) as trip_distance,
@@ -118,17 +119,19 @@ def load_dashboard_data():
                         hour(tpep_pickup_datetime) as pickup_hour,
                         strftime(tpep_pickup_datetime, '%a') as pickup_day_of_week,
                         epoch(tpep_dropoff_datetime - tpep_pickup_datetime)/60.0 as trip_duration_minutes,
-                        CASE WHEN epoch(tpep_dropoff_datetime - tpep_pickup_datetime) > 0 
+                        CASE WHEN epoch(tpep_dropoff_datetime - tpep_pickup_datetime) > 0
                              THEN trip_distance / (epoch(tpep_dropoff_datetime - tpep_pickup_datetime)/3600.0)
                              ELSE 0.0 END as avg_speed_mph,
-                        CASE WHEN fare_amount > 0 THEN (tip_amount / fare_amount) * 100.0 ELSE 0.0 END as tip_percentage,
-                        CASE WHEN dayofweek(tpep_pickup_datetime) BETWEEN 1 AND 5 
-                             AND (hour(tpep_pickup_datetime) BETWEEN 7 AND 9 OR hour(tpep_pickup_datetime) BETWEEN 16 AND 19)
+                        CASE WHEN fare_amount > 0
+                             THEN (tip_amount / fare_amount) * 100.0 ELSE 0.0 END as tip_percentage,
+                        CASE WHEN dayofweek(tpep_pickup_datetime) BETWEEN 1 AND 5
+                             AND (hour(tpep_pickup_datetime) BETWEEN 7 AND 9
+                                  OR hour(tpep_pickup_datetime) BETWEEN 16 AND 19)
                              THEN true ELSE false END as is_peak_hour,
                         row_number() OVER (PARTITION BY month(tpep_pickup_datetime)) as rn
                     FROM '{p_path}'
                 )
-                SELECT 
+                SELECT
                     fare_amount, total_amount, trip_distance, tip_amount,
                     PULocationID as pulocation_id, payment_type,
                     trip_duration_minutes, avg_speed_mph, tip_percentage,

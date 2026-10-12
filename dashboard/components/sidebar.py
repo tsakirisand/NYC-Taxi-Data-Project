@@ -3,6 +3,7 @@
 from typing import Tuple, Dict, Any
 import pandas as pd
 import streamlit as st
+from src.utils.config import settings
 
 
 def render_sidebar_filters(
@@ -11,8 +12,29 @@ def render_sidebar_filters(
     """Render clean interactive sidebar filter panel and return (filtered_sample_df, filter_spec)."""
     st.sidebar.markdown("### 🔍 Global Filters")
 
+    val_files = list(settings.VALIDATED_DATA_DIR.glob("*.parquet"))
+    agg_file = settings.PROCESSED_DATA_DIR / "fact_trips_aggregated.parquet"
+    if val_files and agg_file.exists():
+        data_source_mode = st.sidebar.radio(
+            "Data Source Engine",
+            options=["aggregated", "validated"],
+            format_func=(
+                lambda x: (
+                    "Full Year 2025 (44.18M Trips)"
+                    if x == "aggregated"
+                    else f"Validated Parquet ({len(val_files)} month{'s' if len(val_files) > 1 else ''})"
+                )
+            ),
+            index=0,
+            help="Toggle between full-year pre-aggregated metrics and raw validated Parquet files.",
+        )
+    else:
+        data_source_mode = (
+            "validated" if val_files and not agg_file.exists() else "aggregated"
+        )
+
     if trips_df.empty:
-        return trips_df, {}
+        return trips_df, {"data_source": data_source_mode}
 
     # 1. Month Filter (1 to 12)
     available_months = list(range(1, 13))
@@ -47,13 +69,14 @@ def render_sidebar_filters(
     else:
         selected_zones = []
 
-    # 3. Payment Method Filter
+    # 3. Payment Method Filter (aligned with official NYC TLC standards)
     payment_map = {
         1: "Credit Card",
-        0: "Cash",
-        2: "No Charge",
-        3: "Dispute",
-        4: "Unknown",
+        2: "Cash",
+        3: "No Charge",
+        4: "Dispute",
+        0: "Flex/Unspecified",
+        5: "Unknown",
     }
     selected_payments = st.sidebar.multiselect(
         "Payment Methods",
@@ -80,6 +103,7 @@ def render_sidebar_filters(
     )
 
     filter_spec: Dict[str, Any] = {
+        "data_source": data_source_mode,
         "months": selected_months,
         "zones": selected_zones,
         "payments": selected_payments,
@@ -102,22 +126,38 @@ def render_sidebar_filters(
         filtered_df = trips_df
     else:
         filtered_df = trips_df
-        if selected_months and "pickup_month" in filtered_df.columns and len(selected_months) < 12:
+        if (
+            selected_months
+            and "pickup_month" in filtered_df.columns
+            and len(selected_months) < 12
+        ):
             filtered_df = filtered_df[filtered_df["pickup_month"].isin(selected_months)]
 
         if selected_zones and "pickup_zone_name" in filtered_df.columns:
-            filtered_df = filtered_df[filtered_df["pickup_zone_name"].isin(selected_zones)]
+            filtered_df = filtered_df[
+                filtered_df["pickup_zone_name"].isin(selected_zones)
+            ]
 
-        if selected_payments and "payment_type" in filtered_df.columns and len(selected_payments) < 5:
-            filtered_df = filtered_df[filtered_df["payment_type"].isin(selected_payments)]
+        if (
+            selected_payments
+            and "payment_type" in filtered_df.columns
+            and len(selected_payments) < 5
+        ):
+            filtered_df = filtered_df[
+                filtered_df["payment_type"].isin(selected_payments)
+            ]
 
-        if "trip_distance" in filtered_df.columns and (distance_range[0] > 0 or distance_range[1] < 100):
+        if "trip_distance" in filtered_df.columns and (
+            distance_range[0] > 0 or distance_range[1] < 100
+        ):
             filtered_df = filtered_df[
                 (filtered_df["trip_distance"] >= distance_range[0])
                 & (filtered_df["trip_distance"] <= distance_range[1])
             ]
 
-        if "fare_amount" in filtered_df.columns and (fare_range[0] > 0 or fare_range[1] < 300):
+        if "fare_amount" in filtered_df.columns and (
+            fare_range[0] > 0 or fare_range[1] < 300
+        ):
             filtered_df = filtered_df[
                 (filtered_df["fare_amount"] >= fare_range[0])
                 & (filtered_df["fare_amount"] <= fare_range[1])

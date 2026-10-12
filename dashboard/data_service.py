@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 import streamlit as st
 from src.utils.config import settings
+from src.transformation.weekday_analytics import get_calendar_day_counts
 
 # Load zone lookup once for ID <-> Name mapping
 ZONE_PATH = settings.REFERENCE_DATA_DIR / "taxi_zone_lookup.csv"
@@ -27,20 +28,33 @@ else:
 
 
 @st.cache_data(ttl=3600)
-def get_parquet_info() -> Tuple[str, bool]:
+def get_parquet_info(source_preference: Optional[str] = None) -> Tuple[str, bool]:
     """Return (parquet_file_path, is_aggregated_flag).
-    
-    On local machine with raw validated dataset, query data/validated/*.parquet for full raw precision.
-    On cloud / Render instance without 1GB raw parquet files, query data/processed/fact_trips_aggregated.parquet
-    for 100% exact full-dataset aggregations in sub-millisecond execution time and minimal memory footprint.
+
+    Supports explicit source_preference ('aggregated' or 'validated').
+    Falls back gracefully based on available files:
+    - If aggregated is preferred and exists, queries fact_trips_aggregated.parquet (44.18M full year trips).
+    - If validated is preferred and exists, queries data/validated/*.parquet.
+    - If 12 validated files exist, defaults to raw validated.
+    - If fact_trips_aggregated.parquet exists, defaults to aggregated so all 12 months are accessible.
+    - Otherwise falls back to sample or validated files.
     """
     val_files = list(settings.VALIDATED_DATA_DIR.glob("*.parquet"))
-    if val_files:
+    agg_file = settings.PROCESSED_DATA_DIR / "fact_trips_aggregated.parquet"
+
+    if source_preference == "validated" and val_files:
+        return "data/validated/*.parquet", False
+    if source_preference == "aggregated" and agg_file.exists():
+        return str(agg_file), True
+
+    if len(val_files) >= 12:
         return "data/validated/*.parquet", False
 
-    agg_file = settings.PROCESSED_DATA_DIR / "fact_trips_aggregated.parquet"
     if agg_file.exists():
         return str(agg_file), True
+
+    if val_files:
+        return "data/validated/*.parquet", False
 
     sample_dir = settings.BASE_DIR / "data" / "sample"
     sample_files = list(sample_dir.glob("*.parquet"))
@@ -50,13 +64,15 @@ def get_parquet_info() -> Tuple[str, bool]:
     return "data/validated/*.parquet", False
 
 
-def get_parquet_path() -> str:
+def get_parquet_path(source_preference: Optional[str] = None) -> str:
     """Return parquet path string for app.py."""
-    path, _ = get_parquet_info()
+    path, _ = get_parquet_info(source_preference)
     return path
 
 
-def build_where_clause(filter_spec: Optional[Dict[str, Any]], is_agg: bool = False) -> str:
+def build_where_clause(
+    filter_spec: Optional[Dict[str, Any]], is_agg: bool = False
+) -> str:
     """Build SQL WHERE clause from filter specification dict."""
     if not filter_spec:
         return ""
@@ -133,7 +149,8 @@ def query_kpis(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> Dict[str, float]:
     """Return exact full-dataset KPIs based on active filters."""
-    p_path, is_agg = get_parquet_info()
+    pref = filter_spec.get("data_source") if filter_spec else None
+    p_path, is_agg = get_parquet_info(pref)
     where = build_where_clause(filter_spec, is_agg=is_agg)
     con = _get_duckdb_con()
 
@@ -163,7 +180,8 @@ def query_kpis(
                 COALESCE(AVG(CASE WHEN epoch(tpep_dropoff_datetime - tpep_pickup_datetime) > 0
                                  THEN trip_distance / (epoch(tpep_dropoff_datetime - tpep_pickup_datetime)/3600.0)
                                  ELSE 0.0 END), 0.0) as avg_speed,
-                COALESCE(AVG(CASE WHEN fare_amount > 0 THEN (tip_amount / fare_amount) * 100.0 ELSE 0.0 END), 0.0) as avg_tip_pct
+                COALESCE(AVG(CASE WHEN fare_amount > 0
+                                 THEN (tip_amount / fare_amount) * 100.0 ELSE 0.0 END), 0.0) as avg_tip_pct
             FROM '{p_path}'
             {where}
         """
@@ -187,7 +205,8 @@ def query_monthly_demand(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> pd.DataFrame:
     """Return exact monthly trip volume and gross revenue aggregation."""
-    p_path, is_agg = get_parquet_info()
+    pref = filter_spec.get("data_source") if filter_spec else None
+    p_path, is_agg = get_parquet_info(pref)
     where = build_where_clause(filter_spec, is_agg=is_agg)
     con = _get_duckdb_con()
     if is_agg:
@@ -238,7 +257,8 @@ def query_hourly_demand(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> pd.DataFrame:
     """Return exact 24-hour demand profile aggregation."""
-    p_path, is_agg = get_parquet_info()
+    pref = filter_spec.get("data_source") if filter_spec else None
+    p_path, is_agg = get_parquet_info(pref)
     where = build_where_clause(filter_spec, is_agg=is_agg)
     con = _get_duckdb_con()
     if is_agg:
@@ -272,8 +292,9 @@ def query_hourly_demand(
 def query_dow_demand(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> pd.DataFrame:
-    """Return exact Day of Week volume profile aggregation."""
-    p_path, is_agg = get_parquet_info()
+    """Return Day of Week volume profile with distinct calendar date counts and averages."""
+    pref = filter_spec.get("data_source") if filter_spec else None
+    p_path, is_agg = get_parquet_info(pref)
     where = build_where_clause(filter_spec, is_agg=is_agg)
     con = _get_duckdb_con()
     if is_agg:
@@ -287,18 +308,30 @@ def query_dow_demand(
             {where}
             GROUP BY pickup_day_of_week
         """
+        df = con.query(sql).df()
+        months_filter = filter_spec.get("months") if filter_spec else None
+        day_counts = get_calendar_day_counts(2025, months_filter)
+        df["calendar_days"] = (
+            df["pickup_day_of_week"].map(day_counts).fillna(1).astype(int)
+        )
     else:
         sql = f"""
             SELECT
                 strftime(tpep_pickup_datetime, '%a') as pickup_day_of_week,
                 COUNT(*) as trips,
+                COUNT(DISTINCT CAST(tpep_pickup_datetime AS DATE)) as calendar_days,
                 COALESCE(SUM(total_amount), 0.0) as revenue,
                 COALESCE(AVG(fare_amount), 0.0) as avg_fare
             FROM '{p_path}'
             {where}
             GROUP BY pickup_day_of_week
         """
-    df = con.query(sql).df()
+        df = con.query(sql).df()
+
+    df["calendar_days"] = df["calendar_days"].replace(0, 1)
+    df["avg_daily_trips"] = (df["trips"] / df["calendar_days"]).round(2)
+    df["avg_daily_revenue"] = (df["revenue"] / df["calendar_days"]).round(2)
+
     dow_order = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     df["pickup_day_of_week"] = pd.Categorical(
         df["pickup_day_of_week"], categories=dow_order, ordered=True
@@ -311,7 +344,8 @@ def query_payment_breakdown(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> pd.DataFrame:
     """Return exact Payment Type breakdown and tipping statistics."""
-    p_path, is_agg = get_parquet_info()
+    pref = filter_spec.get("data_source") if filter_spec else None
+    p_path, is_agg = get_parquet_info(pref)
     where = build_where_clause(filter_spec, is_agg=is_agg)
     con = _get_duckdb_con()
     if is_agg:
@@ -332,7 +366,8 @@ def query_payment_breakdown(
                 payment_type,
                 COUNT(*) as trips,
                 COALESCE(SUM(total_amount), 0.0) as revenue,
-                COALESCE(AVG(CASE WHEN fare_amount > 0 THEN (tip_amount / fare_amount) * 100.0 ELSE 0.0 END), 0.0) as avg_tip_pct
+                COALESCE(AVG(CASE WHEN fare_amount > 0
+                                 THEN (tip_amount / fare_amount) * 100.0 ELSE 0.0 END), 0.0) as avg_tip_pct
             FROM '{p_path}'
             {where}
             GROUP BY payment_type
@@ -341,10 +376,10 @@ def query_payment_breakdown(
     df = con.query(sql).df()
     payment_map = {
         1: "Credit Card",
-        0: "Cash",
-        2: "No Charge",
-        3: "Dispute",
-        4: "Unknown",
+        2: "Cash",
+        3: "No Charge",
+        4: "Dispute",
+        0: "Flex/Unspecified",
         5: "Unknown",
     }
     df["payment_label"] = df["payment_type"].map(payment_map).fillna("Unknown")
@@ -356,7 +391,8 @@ def query_top_zones(
     filter_key: str, filter_spec: Optional[Dict[str, Any]], limit: int = 10
 ) -> pd.DataFrame:
     """Return exact Top Busiest and Grossing Taxi Pickup Zones."""
-    p_path, is_agg = get_parquet_info()
+    pref = filter_spec.get("data_source") if filter_spec else None
+    p_path, is_agg = get_parquet_info(pref)
     where = build_where_clause(filter_spec, is_agg=is_agg)
     con = _get_duckdb_con()
     if is_agg:
@@ -386,9 +422,7 @@ def query_top_zones(
             LIMIT {limit}
         """
     df = con.query(sql).df()
-    df["pickup_zone_name"] = (
-        df["pulocation_id"].map(ZONE_DICT).fillna("Unknown Zone")
-    )
+    df["pickup_zone_name"] = df["pulocation_id"].map(ZONE_DICT).fillna("Unknown Zone")
     return df
 
 
@@ -397,7 +431,8 @@ def query_airport_metrics(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> Dict[str, Any]:
     """Return exact airport trip counts and gross revenues for JFK and LaGuardia."""
-    p_path, is_agg = get_parquet_info()
+    pref = filter_spec.get("data_source") if filter_spec else None
+    p_path, is_agg = get_parquet_info(pref)
     where = build_where_clause(filter_spec, is_agg=is_agg)
     zone_col = "pulocation_id" if is_agg else "PULocationID"
 
@@ -464,7 +499,8 @@ def query_peak_hour_info(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> Dict[str, Any]:
     """Return exact dynamically computed peak demand hour."""
-    p_path, is_agg = get_parquet_info()
+    pref = filter_spec.get("data_source") if filter_spec else None
+    p_path, is_agg = get_parquet_info(pref)
     where = build_where_clause(filter_spec, is_agg=is_agg)
     con = _get_duckdb_con()
     if is_agg:
@@ -519,7 +555,8 @@ def query_speed_by_hour(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> pd.DataFrame:
     """Return average speed in mph across 24 hours."""
-    p_path, is_agg = get_parquet_info()
+    pref = filter_spec.get("data_source") if filter_spec else None
+    p_path, is_agg = get_parquet_info(pref)
     where = build_where_clause(filter_spec, is_agg=is_agg)
     con = _get_duckdb_con()
     if is_agg:
@@ -552,7 +589,8 @@ def query_tipping_summary(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> pd.DataFrame:
     """Return volume breakdown of tipped vs non-tipped trips."""
-    p_path, is_agg = get_parquet_info()
+    pref = filter_spec.get("data_source") if filter_spec else None
+    p_path, is_agg = get_parquet_info(pref)
     where = build_where_clause(filter_spec, is_agg=is_agg)
     con = _get_duckdb_con()
     if is_agg:
@@ -587,23 +625,27 @@ def query_rush_hour_summary(
     filter_key: str, filter_spec: Optional[Dict[str, Any]]
 ) -> pd.DataFrame:
     """Return average duration and speed for Peak Rush Hour vs Off-Peak."""
-    p_path, is_agg = get_parquet_info()
+    pref = filter_spec.get("data_source") if filter_spec else None
+    p_path, is_agg = get_parquet_info(pref)
     where = build_where_clause(filter_spec, is_agg=is_agg)
     con = _get_duckdb_con()
     if is_agg:
         sql = f"""
             SELECT
-                'Off-Peak' as peak_category,
+                CASE WHEN is_peak_hour THEN 'Peak Rush Hour' ELSE 'Off-Peak' END as peak_category,
                 COALESCE(SUM(sum_duration_minutes) / NULLIF(SUM(trip_count), 0), 0.0) as avg_duration,
                 COALESCE(SUM(sum_speed_mph) / NULLIF(SUM(trip_count), 0), 0.0) as avg_speed
             FROM '{p_path}'
             {where}
+            GROUP BY is_peak_hour
+            ORDER BY peak_category DESC
         """
     else:
         sql = f"""
             SELECT
                 CASE WHEN dayofweek(tpep_pickup_datetime) BETWEEN 1 AND 5
-                          AND (hour(tpep_pickup_datetime) BETWEEN 7 AND 9 OR hour(tpep_pickup_datetime) BETWEEN 16 AND 19)
+                          AND (hour(tpep_pickup_datetime) BETWEEN 7 AND 9
+                               OR hour(tpep_pickup_datetime) BETWEEN 16 AND 19)
                      THEN 'Peak Rush Hour' ELSE 'Off-Peak' END as peak_category,
                 COALESCE(AVG(epoch(tpep_dropoff_datetime - tpep_pickup_datetime)/60.0), 0.0) as avg_duration,
                 COALESCE(AVG(CASE WHEN epoch(tpep_dropoff_datetime - tpep_pickup_datetime) > 0

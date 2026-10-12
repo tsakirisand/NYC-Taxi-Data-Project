@@ -50,14 +50,29 @@ ORDER BY hour_rank;
 
 
 -- Query 4: What are the busiest days of the week?
+-- Normalizes trip volume by calendar date occurrences to prevent skew
+-- from uneven weekday counts across monthly calendar windows.
+WITH DailyBreakdown AS (
+    SELECT 
+        pickup_date,
+        pickup_day_of_week,
+        COUNT(*) AS daily_trips,
+        ROUND(SUM(total_amount), 2) AS daily_revenue,
+        ROUND(AVG(fare_amount), 2) AS daily_avg_fare
+    FROM fact_trips
+    GROUP BY pickup_date, pickup_day_of_week
+)
 SELECT 
     pickup_day_of_week,
-    COUNT(*) AS total_trips,
-    ROUND(SUM(total_amount), 2) AS total_revenue,
-    ROUND(AVG(fare_amount), 2) AS avg_fare
-FROM fact_trips
+    COUNT(DISTINCT pickup_date) AS calendar_days,
+    SUM(daily_trips) AS total_trips,
+    ROUND(AVG(daily_trips), 2) AS avg_trips_per_day,
+    ROUND(SUM(daily_revenue), 2) AS total_revenue,
+    ROUND(AVG(daily_revenue), 2) AS avg_revenue_per_day,
+    ROUND(AVG(daily_avg_fare), 2) AS avg_fare
+FROM DailyBreakdown
 GROUP BY pickup_day_of_week
-ORDER BY total_trips DESC;
+ORDER BY avg_trips_per_day DESC;
 
 
 -- Query 5: What are the top pickup taxi zones?
@@ -108,6 +123,7 @@ SELECT
         WHEN 2 THEN 'Cash'
         WHEN 3 THEN 'No Charge'
         WHEN 4 THEN 'Dispute'
+        WHEN 0 THEN 'Flex/Unspecified'
         ELSE 'Unknown'
     END AS payment_type_desc,
     COUNT(*) AS total_trips,

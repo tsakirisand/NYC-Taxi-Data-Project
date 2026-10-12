@@ -31,3 +31,6 @@ airflow.db
 
 # Environment variables
 .env
+
+# Scratch and temporary investigation
+scratch/
